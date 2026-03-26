@@ -1,0 +1,136 @@
+# Loop Protocol
+
+Phase B core: the autonomous propose-verify-evaluate-record cycle.
+
+## Prerequisites
+
+- Preflight passed (see `preflight-protocol.md`)
+- Baseline recorded as round 0 in `state.jsonl`
+- config.yaml is finalized (no `draft: true`)
+
+## Single Round Lifecycle
+
+```
+1. PROPOSE  -->  2. COMMIT  -->  3. VERIFY  -->  4. EVALUATE  -->  5. RECORD  -->  6. ENTROPY CHECK
+     ^                                                                                             |
+     |_____________________________________________________________________________________________|
+                                                   continue
+```
+
+### 1. Propose
+
+- Read context.md Next Steps for direction.
+- If the change is non-trivial (multi-file, architectural, or unclear path), invoke the `brainstorming` skill to explore alternatives before committing to an approach. Skip for simple, obvious changes.
+- Make code changes within `boundary.mutable`. Never touch `boundary.immutable`.
+- Apply `atomicity_test`: if the change description needs `and`, split into separate rounds.
+- Apply `simplicity_rule` from config if set.
+
+### 2. Commit
+
+- Stage only files within `boundary.mutable`.
+- Commit with message: `harness(round-{N}): <description>`
+- If pre-commit hook blocks: record evaluation result `hook_blocked`, do not retry. Move to Record.
+
+### 3. Verify
+
+Execute gates per `verification-gate.md` composite execution order:
+
+1. Run all mandatory `command` gates.
+2. On all pass, run `agent_review` gates (if configured). Use the `critique` skill as the review engine for discovery-heavy agent-review gates.
+3. On pass or escalation, queue `human_review` if configured.
+4. Short-circuit on first mandatory deterministic `fail`.
+
+Capture full stdout/stderr to `.harness/tasks/<task_id>/artifacts/round-{N}/`.
+
+### 4. Evaluate
+
+Use `evaluation-protocol.md` to decide what the verification result means.
+
+| Verification + evaluation outcome | Result |
+|---|---|
+| Deterministic gate failed | `discard` |
+| Review produced unresolved escalation | `needs_escalation` |
+| Verification command crashed | `crash` |
+| Verified, but improvement is below `min_delta` | `no_op` |
+| Verified and frontier improved or held acceptably | `keep` |
+| Objective met and close authority satisfied | `complete` |
+
+After revert (`discard` or `crash`): verify the revert itself does not break baseline. If it does, stop and escalate.
+
+### 5. Record
+
+Append one event to `state.jsonl` per `state-ledger.md`.
+
+Update context.md per `context-protocol.md` update discipline:
+- Overwrite Current State
+- Curate Working Memory
+- Rewrite Next Steps
+- Append to Decisions if a new decision was made
+
+### 6. Entropy Check
+
+After recording, evaluate whether to continue or stop.
+
+#### Stop Conditions (check in order)
+
+1. **Objective met** (`satisfy` mode): all `acceptance_criteria` pass and `close_authority` is satisfied.
+2. **Budget exhausted**: current round >= `max_rounds`. Stop, report best result.
+   - If `max_rounds == -1`, budget stop is disabled.
+3. **Stagnation**: last N rounds (where N = `stagnation.rounds`) all have result `no_op` or `discard`. Stop, report best result.
+4. **Escalation**: result is `needs_escalation`. Pause, wait for human input.
+5. **Complete**: latest round result is `complete`. Stop with success.
+
+#### Doom Loop Detection
+
+Track error patterns across rounds. If the same guard fails with the same error signature N times (where N = `doom_loop_threshold`):
+
+Before executing any doom_loop_action, invoke the `systematic-debugging` skill to diagnose the root cause. The diagnosis informs the pivot -- do not pivot blindly.
+
+| `doom_loop_action` | Behavior |
+|---|---|
+| `reread_and_pivot` | Re-read all files in `boundary.mutable`. Discard current approach. Invoke `brainstorming` skill to generate alternative strategies, then pick one. Note the pivot and reasoning in context.md Decisions. |
+| `widen_boundary` | Suggest expanding `boundary.mutable`. Requires user approval. Pause loop until approved. |
+| `ask_human` | Pause loop. Present the repeated failure pattern and ask for guidance. |
+
+Error signature matching: normalize guard output by stripping line numbers and timestamps. Two errors match if they share the same failing test or rule name and error category.
+
+#### Continue
+
+If no stop condition fires, return to step 1 (Propose) for the next round.
+
+## Volatile Metric Handling
+
+When `evaluation.metric.volatile: true` in config:
+
+- Step 3 (Verify): run measurement `evaluation.metric.samples` times, take median.
+- Step 4 (Evaluate): compare median against the previous frontier. Apply `min_delta` and `confirmation_runs`.
+- Step 5 (Record): store the metric payload in `state.jsonl`.
+
+## Rollback Safety
+
+- `rollback.granularity: commit` (default): `git revert HEAD --no-edit`
+- `rollback.strategy: revert_commit` (default): create a revert commit (preserves history)
+- `rollback.strategy: reset_to_last_pass`: `git reset --hard <last_keep_commit>` (destructive, loses intermediate history)
+- `rollback.preserve_failed_experiments: true`: before reverting, save the diff to `artifacts/round-{N}/attempted.patch`
+
+## Multi-Task Git Isolation
+
+Each active task works on branch `harness/<task_id>`. AGENTS.md updates commit directly to the main branch.
+
+## Session Boundary
+
+When ending a session mid-loop:
+1. Complete the current round (do not leave a half-committed state).
+2. Update context.md with full current state.
+3. If mid-verify, record as `crash` and revert.
+4. Write a structured feedback note per `feedback-protocol.md`:
+   ```json
+   // .harness/tasks/<task_id>/feedback-note.json
+   {
+     "uncertainties": [],
+     "workarounds": [],
+     "needs_review": []
+   }
+   ```
+5. Auto-detect: check `state.jsonl` for repeated failure signatures. Append `repeat_loop` events.
+6. Report: current round, best result, and how to resume (`/harness run`).
