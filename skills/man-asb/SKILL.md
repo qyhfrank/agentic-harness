@@ -47,6 +47,9 @@ asb agent                       # Interactive agent selector
 asb skill                       # Interactive skill selector
 asb hook                        # Interactive hook selector (Claude Code only)
 asb sync                        # Push all libraries + MCP to applications
+asb sync --dry-run              # Preview changes without writing
+asb sync -u / --update          # Update remote plugin sources before syncing
+asb sync --no-update            # Skip remote source updates (default)
 asb <lib> load <platform>       # Import from a platform into library
 asb <lib> list [--json]         # Show inventory and sync status
 asb plugin list                 # List discovered plugins
@@ -56,6 +59,7 @@ asb plugin disable <ref>        # Disable a plugin
 asb plugin marketplace add <path-or-url>   # Add plugin source
 asb plugin marketplace remove <name>       # Remove plugin source
 asb plugin marketplace list                # List sources
+asb plugin update [name]                   # Pull latest for remote sources
 ```
 
 `<lib>` = `rule | command | agent | skill | hook`. `<ref>` = `plugin` or `plugin@source`.
@@ -72,6 +76,7 @@ All sections are optional. Defaults apply when omitted.
 # --- Target Applications ---
 [applications]
 enabled = ["claude-code", "codex", "cursor"]
+assume_installed = []  # force distribution to apps whose dirs don't exist yet
 # Supported IDs: claude-code, claude-desktop, codex, cursor,
 #                gemini, opencode, trae, trae-cn
 
@@ -105,6 +110,7 @@ enabled = ["pre-commit-lint"]
 # --- Plugins ---
 [plugins]
 enabled = ["context7", "my-plugin@team-lib"]
+auto_update = false  # true: auto-pull remote sources on every sync
 
 [plugins.sources]
 team-lib = "https://github.com/org/team-library"
