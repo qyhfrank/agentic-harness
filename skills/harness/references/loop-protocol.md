@@ -113,24 +113,19 @@ When `evaluation.metric.volatile: true` in config:
 - `rollback.strategy: reset_to_last_pass`: `git reset --hard <last_keep_commit>` (destructive, loses intermediate history)
 - `rollback.preserve_failed_experiments: true`: before reverting, save the diff to `artifacts/round-{N}/attempted.patch`
 
-## Multi-Task Git Isolation
+## Git Isolation
 
-Each active task works on branch `harness/<task_id>`. AGENTS.md updates commit directly to the main branch.
+Each active task works on branch `<task_id>` inside a worktree (see Worktree Isolation in `SKILL.md`). All commits, including AGENTS.md updates, stay on the task branch until the user merges via the Completion flow.
 
 ## Session Boundary
 
 When ending a session mid-loop:
+
 1. Complete the current round (do not leave a half-committed state).
 2. Update context.md with full current state.
 3. If mid-verify, record as `crash` and revert.
-4. Write a structured feedback note per `feedback-protocol.md`:
-   ```json
-   // .harness/tasks/<task_id>/feedback-note.json
-   {
-     "uncertainties": [],
-     "workarounds": [],
-     "needs_review": []
-   }
-   ```
+4. Write a structured feedback note per `feedback-protocol.md`.
 5. Auto-detect: check `state.jsonl` for repeated failure signatures. Append `repeat_loop` events.
 6. Report: current round, best result, and how to resume (`/harness run`).
+
+When the loop terminates (not mid-session), hand off to the Completion flow in `SKILL.md` for merge/keep/discard.

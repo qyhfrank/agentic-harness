@@ -42,7 +42,7 @@ After all mandatory checks pass:
 
 ```
 Preflight Check Results:
-[PASS] Repo integrity: clean git repo on branch main
+[PASS] Repo integrity: clean git repo on branch <task_id>
 [PASS] Clean tree: no uncommitted changes
 [PASS] Baseline verify: make test passed (14/14 tests, 72.3% coverage)
 [PASS] Scope resolve: all mutable/immutable paths exist

@@ -45,7 +45,7 @@ evaluation:
 
 ## Close Authority
 
-`close_authority` answers who may declare the task complete:
+`close_authority` answers who may declare the task complete. When running in a worktree, `complete` triggers the Completion flow in `SKILL.md` (merge/keep/discard), not direct integration:
 
 | Type | Meaning |
 |---|---|
@@ -80,7 +80,7 @@ Apply in order:
 
 For `satisfy` tasks, `complete` depends on `acceptance_criteria`, not on the absence of reviewer complaints.
 
-For `optimize` tasks, `keep` updates the current frontier and `complete` normally does not fire unless a human stops the run.
+For `optimize` tasks, `keep` updates the current frontier. The evaluator does not autonomously produce `complete`; the run ends via budget, stagnation, or user-initiated stop, all of which transition to the Completion flow.
 
 ## Metric Interpretation
 

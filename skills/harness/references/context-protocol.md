@@ -13,6 +13,7 @@ Maintenance rules for `.harness/tasks/<task_id>/context.md` and cross-session re
 - current_objective: "reduce inference latency below 200ms"
 - best_result: "76.5 latency score (round 9, commit abc1234)"
 - last_action: "round 11 attempted X, verifier failed (lint regression), reverted"
+- worktree: <task_id> branch, path .claude/worktrees/<task_id>/
 
 ## Working Memory
 - Observations about the codebase relevant to the task
@@ -31,7 +32,7 @@ Maintenance rules for `.harness/tasks/<task_id>/context.md` and cross-session re
 
 | Section | Contains | Update frequency |
 |---|---|---|
-| Current State | Phase, round counter, best result, last action | Every round (overwrite) |
+| Current State | Phase, round counter, best result, last action, worktree info | Every round (overwrite) |
 | Working Memory | Codebase observations, patterns, dead ends | Every round (curate) |
 | Decisions | Committed choices with rationale | When a decision is made (append) |
 | Next Steps | Immediate priorities for upcoming rounds | Every round (full rewrite) |
@@ -85,21 +86,50 @@ Do not store artifacts inline in context.md. Reference by path.
 On session start (fresh agent, no prior context in conversation), execute this sequence:
 
 ```
-1. Resolve current task                  -> explicit id, branch, .harness/current-task, or sole task
-2. Read task config.yaml                 -> task definition, boundaries, verification, evaluation, stop guards
-3. Read task context.md                  -> phase, progress, learnings, blockers
-4. Read task state.jsonl                 -> tail recent events, full scan if needed
-5. Read AGENTS.md                        -> protocol constraints, repo conventions
+1. Resolve current task                  -> explicit task_id, unique branch/task_slug, .harness/current-task, or sole task
+2. Verify worktree state                 -> confirm session is in the task's worktree; re-enter if needed
+3. Read task config.yaml                 -> task definition, boundaries, verification, evaluation, stop guards
+4. Read task context.md                  -> phase, progress, learnings, blockers
+5. Read task state.jsonl                 -> tail recent events, full scan if needed
+6. Read AGENTS.md                        -> protocol constraints, repo conventions
 ```
 
-After reading, verify recovery by confirming these four answers before proceeding:
+After reading, verify recovery by confirming these five answers before proceeding:
 
 1. Current phase and round number
 2. Best result so far (metric value or acceptance state, round, commit)
 3. Outstanding issues or blockers
-4. What to do next (from Next Steps)
+4. Worktree state (in expected worktree and branch, or needs re-entry)
+5. What to do next (from Next Steps)
 
 If any answer is missing or contradictory between context.md and `state.jsonl`, resolve from `state.jsonl` (structured source of truth for facts) and update context.md before continuing.
+
+## Legacy Archive Recovery
+
+Use this path when all of the following are true:
+
+- `state.jsonl` is empty
+- the task config is already finalized
+- `context.md`, `design.md`, `plan.md`, or `artifacts/` clearly show that the
+  task has prior work from before ledger discipline
+
+Interpretation: the task is resumable, but its durable history lives in archived
+docs rather than structured ledger events. Recover enough state to continue
+safely without rewriting history.
+
+### Legacy Recovery Order
+
+1. Resolve the task and verify worktree state as in normal recovery.
+2. Read `config.yaml`, `context.md`, and `AGENTS.md`.
+3. Read the smallest archived artifact set that can answer the five recovery
+   questions. Prefer an artifact index or compressed history note over raw logs.
+4. Rewrite `context.md` so recovered facts are explicitly labeled, for example
+   `Recovered from artifacts: ...`.
+5. Leave `state.jsonl` untouched. Do not fabricate historical
+   `baseline_recorded` or `round_completed` events.
+6. When the next real run begins, record a fresh baseline event against the
+   current branch state. Mention archival recovery in the new baseline summary
+   only if that context helps explain the starting point.
 
 ## Recovery Smoke Test
 
@@ -108,7 +138,8 @@ A fresh agent reading only `AGENTS.md` + task-scoped `.harness/` state must accu
 1. Current phase and round
 2. Best result so far and its commit
 3. Outstanding issues and blockers
-4. What to do next
+4. Worktree state (correct branch and path)
+5. What to do next
 
 If it cannot, context.md is stale or incomplete. Fix before running the next round.
 
@@ -121,3 +152,4 @@ If it cannot, context.md is stale or incomplete. Fix before running the next rou
 | Working Memory > 15 items | Insufficient pruning | Compress or move to Decisions |
 | best_result in context.md disagrees with `state.jsonl` frontier | Missed update | Recompute from `state.jsonl` |
 | Decisions contradict Working Memory | Hypothesis promoted without cleanup | Remove from Working Memory |
+| `state.jsonl` is empty but the task clearly has prior history | Pre-ledger task archive or missed ledger adoption | Recover from archived artifacts, label recovered facts in `context.md`, and let the next real run record a fresh baseline |

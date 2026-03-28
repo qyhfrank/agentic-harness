@@ -4,22 +4,11 @@ Phase 0: diagnose the repository and create task-scoped `.harness/` infrastructu
 
 ## Entry Conditions
 
-- User has provided a goal (explicit or inferred from conversation)
+- Goal is known (enforced by SKILL.md Missing Goal Gate before scaffold loads)
 - Current directory is a git repository
+- Session is inside a worktree (enforced by SKILL.md Worktree Isolation before scaffold loads)
 
 If not in a git repo, stop and tell the user.
-
-If the goal is missing, ask exactly one targeted question before creating any harness files:
-
-`What task should this harness pursue in this repo? For example: fix a bug, add a feature, raise test coverage, or optimize a metric.`
-
-Rules:
-- `/harness`, `set up a harness`, and similar setup phrases are not valid goals
-- broad intents such as `optimize this repo`, `make it better`, or `improve quality` are not yet concrete goals
-- when the user provides only a broad intent, ask exactly one focused narrowing question before scaffold:
-  `What specific outcome should this harness optimize here? For example: reduce test failures, add smoke coverage for one area, or improve a named metric.`
-- Do not fabricate `task.description` from generic setup language
-- Do not create `.harness/` until the user supplies a goal
 
 ## Procedure
 
@@ -54,9 +43,10 @@ Harness always uses task-scoped state.
 
 Default scaffold behavior:
 - Create `.harness/` if missing
-- Derive a task ID from the user's goal per the Task ID Generation rules in `SKILL.md` (e.g., "fix the auth timeout bug" → `fix-auth-timeout`)
-- Create `.harness/tasks/<task_id>/` using the derived ID
-- Write the derived ID to `.harness/current-task`
+- Derive `task_slug` from the user's goal per the Task ID Generation rules in `SKILL.md`
+- Allocate `task_id` as `NNN-<task_slug>` (for example, "fix the auth timeout bug" -> `000-fix-auth-timeout-bug`)
+- Create `.harness/tasks/<task_id>/` using the allocated ID
+- Write the allocated ID to `.harness/current-task`
 
 If a task is already resolved, scaffold only fills gaps for that task.
 
@@ -214,10 +204,10 @@ Scaffold complete.
 
 Created:
   .harness/current-task
-  .harness/tasks/fix-auth-timeout/config.yaml (draft)
-  .harness/tasks/fix-auth-timeout/context.md
-  .harness/tasks/fix-auth-timeout/state.jsonl
-  .harness/tasks/fix-auth-timeout/artifacts/
+  .harness/tasks/fix-auth-timeout-bug/config.yaml (draft)
+  .harness/tasks/fix-auth-timeout-bug/context.md
+  .harness/tasks/fix-auth-timeout-bug/state.jsonl
+  .harness/tasks/fix-auth-timeout-bug/artifacts/
 
 Repository assessment:
   [ready]   Test: jest (42 test files, coverage configured)
@@ -228,17 +218,10 @@ Repository assessment:
 Next: run `/harness plan` to finalize config.yaml
 ```
 
+Report the worktree branch and path alongside the file listing so the user knows where the harness state lives.
+
 ## Feedback Note
 
-Before reporting scaffold complete, write a structured feedback note per `feedback-protocol.md`:
-
-```json
-// .harness/tasks/<task_id>/feedback-note.json (overwritten each phase)
-{
-  "uncertainties": [],
-  "workarounds": [],
-  "needs_review": []
-}
-```
+Before reporting scaffold complete, write a structured feedback note per `feedback-protocol.md`.
 
 Auto-detect: check all config values against defined vocabularies. If any value is out-of-vocab, append a `bad_default` event to `~/.asb/state/harness-feedback/events.jsonl`.

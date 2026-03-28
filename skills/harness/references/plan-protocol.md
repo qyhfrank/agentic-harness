@@ -31,7 +31,7 @@ task:
   source: ""
 ```
 
-`task.id` is set during scaffold and must not be changed during plan. It is used as the directory name, branch suffix, ledger path, and artifact path. If the user wants a different ID, re-scaffold a new task instead.
+`task.id` is set during scaffold and must not be changed during plan. It is used as the directory name, branch name, worktree name, ledger path, and artifact path. If the user wants a different ID, re-scaffold a new task instead.
 
 If the user provided a goal during scaffold, `description` is pre-filled. Confirm it captures the intent.
 
@@ -165,15 +165,6 @@ Plan mode may span multiple sessions. On re-entry:
 
 ## Feedback Note
 
-After finalizing config, write a structured feedback note per `feedback-protocol.md`:
-
-```json
-// .harness/tasks/<task_id>/feedback-note.json
-{
-  "uncertainties": [],
-  "workarounds": [],
-  "needs_review": []
-}
-```
+After finalizing config, write a structured feedback note per `feedback-protocol.md`.
 
 Auto-detect: compare finalized config against the scaffold draft. Any field where the user overrode the draft value generates a `bad_default` or `protocol_gap` event (source: `human`).

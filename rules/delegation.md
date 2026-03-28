@@ -36,6 +36,7 @@ Global contract for any workflow that creates new independent LLM contexts: Task
 - `backgroundable` work is read-only or advisory and not needed immediately for the next step; prefer background delegation so the parent can continue coordinating or verifying locally.
 - `local-only` work already fits in the parent's context or would cost more to reconstruct in a fresh agent than to do directly; keep it local.
 - Default to `local-only` for single-file UI tweaks, narrow follow-up fixes, small serialization changes, and quick read-only checks unless there is a clear isolation or independent-review payoff that outweighs subagent cold-start cost.
+- Subagents can discover and load skills. When a subagent's task may trigger skills that require further sub-delegation (e.g., `/skill-evals` running self-play, `/systematic-debugging` spawning investigation agents), set `max_depth` and `child_budget` to accommodate the expected depth. The default leaf values (`max_depth = 1`, `child_budget = 0`) are for pure leaf work; skill-aware tasks typically need at least `max_depth = 2` and `child_budget >= 1`.
 
 ## Stage Gates
 

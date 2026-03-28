@@ -39,11 +39,11 @@ The system (not the agent) expands notes into events. External facts also genera
 {
   "ts": "ISO-8601",
   "run_id": "harness-run-YYYYMMDD-shortid",
-  "round_ref": "scaffold | plan-finalize | run-round-N | session-end",
+  "round_ref": "scaffold | plan-finalize | run-round-N | completion | session-end",
   "subject_ref": "harness.<phase>.<topic>",
   "subject_artifact": "references/<file>.md#<section>",
   "subject_version": "git:<7-char-sha>",
-  "phase": "scaffold | plan | run",
+  "phase": "scaffold | plan | run | completion",
   "source": "agent | grader | human",
   "fault_domain": "subject | repo | runtime | task | unknown",
   "kind": "<base-kind>",
@@ -81,6 +81,7 @@ These events are generated from observable facts, not agent self-report:
 | Scaffold complete | `.harness/tasks/<task_id>/feedback-note.json` | Check config values against vocabulary |
 | Plan finalized | `.harness/tasks/<task_id>/feedback-note.json` | Check for human corrections vs draft |
 | Each round end | `.harness/tasks/<task_id>/feedback-note.json` | Check repeated failure signatures |
+| Completion | `.harness/tasks/<task_id>/feedback-note.json` | N/A (must be expanded to durable events before worktree disposal) |
 | Session end | `.harness/tasks/<task_id>/feedback-note.json` | N/A |
 
 ## Source Weights (for future reducer)

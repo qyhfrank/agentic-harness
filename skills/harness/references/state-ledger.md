@@ -37,7 +37,7 @@ Written once after preflight succeeds.
     "frontier": "initial"
   },
   "artifacts": [],
-  "summary": "initial measurement on main"
+  "summary": "initial measurement on task branch"
 }
 ```
 
@@ -75,12 +75,30 @@ Written exactly once per completed round.
 }
 ```
 
+### Disposition Event
+
+Written once when the Completion flow resolves the task's worktree.
+
+```json
+{
+  "schema_version": 1,
+  "event": "task_disposed",
+  "task_id": "fix-auth-timeout",
+  "round": 12,
+  "disposition": "merged",
+  "target_branch": "main",
+  "summary": "squash-merged 12 rounds into main"
+}
+```
+
+`disposition` values: `merged`, `kept`, `discarded`.
+
 ## Required Fields
 
 | Field | Type | Rules |
 |---|---|---|
 | `schema_version` | integer | Start at `1`. Increment only for breaking ledger changes. |
-| `event` | string | `baseline_recorded` or `round_completed` for MVP. |
+| `event` | string | `baseline_recorded`, `round_completed`, or `task_disposed` for MVP. |
 | `task_id` | string | Stable task identifier. |
 | `round` | integer | Baseline is `0`. Monotonically increasing by 1 for round events. |
 | `commit` | string or null | Short SHA for kept/discarded work, `null` when no commit exists. |
