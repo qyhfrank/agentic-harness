@@ -1,6 +1,6 @@
 # State Ledger
 
-Schema and conventions for the canonical task ledger: `.harness/tasks/<task_id>/state.jsonl`.
+Schema and conventions for the canonical task ledger: `<harness_root>/.harness/tasks/<task_id>/state.jsonl`.
 
 ## Canonical Format
 
@@ -124,14 +124,16 @@ Never edit or delete existing events. Each completed baseline or round appends e
 
 ## Reading Conventions
 
+All paths below use `<harness_root>` as the resolved harness root path (see SKILL.md Harness Root).
+
 | Need | Command |
 |---|---|
-| Latest event | `tail -1 .harness/tasks/<task_id>/state.jsonl` |
-| Recent N events | `tail -n N .harness/tasks/<task_id>/state.jsonl` |
-| All non-keep results | `jq -c 'select(.evaluation.result != "keep" and .evaluation.result != "baseline")' .harness/tasks/<task_id>/state.jsonl` |
-| Best metric | `jq -s 'map(select(.metric.value != null)) | max_by(.metric.value)' .harness/tasks/<task_id>/state.jsonl` |
-| Specific round | `jq -c 'select(.round == N)' .harness/tasks/<task_id>/state.jsonl` |
-| Escalations | `jq -c 'select(.verification.status == "needs_escalation" or .evaluation.result == "needs_escalation")' .harness/tasks/<task_id>/state.jsonl` |
+| Latest event | `tail -1 <harness_root>/.harness/tasks/<task_id>/state.jsonl` |
+| Recent N events | `tail -n N <harness_root>/.harness/tasks/<task_id>/state.jsonl` |
+| All non-keep results | `jq -c 'select(.evaluation.result != "keep" and .evaluation.result != "baseline")' <harness_root>/.harness/tasks/<task_id>/state.jsonl` |
+| Best metric | `jq -s 'map(select(.metric.value != null)) | max_by(.metric.value)' <harness_root>/.harness/tasks/<task_id>/state.jsonl` |
+| Specific round | `jq -c 'select(.round == N)' <harness_root>/.harness/tasks/<task_id>/state.jsonl` |
+| Escalations | `jq -c 'select(.verification.status == "needs_escalation" or .evaluation.result == "needs_escalation")' <harness_root>/.harness/tasks/<task_id>/state.jsonl` |
 
 ## Derived Summary View
 

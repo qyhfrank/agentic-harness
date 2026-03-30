@@ -78,11 +78,11 @@ These events are generated from observable facts, not agent self-report:
 
 | When | Agent note path | Auto-detect |
 |---|---|---|
-| Scaffold complete | `.harness/tasks/<task_id>/feedback-note.json` | Check config values against vocabulary |
-| Plan finalized | `.harness/tasks/<task_id>/feedback-note.json` | Check for human corrections vs draft |
-| Each round end | `.harness/tasks/<task_id>/feedback-note.json` | Check repeated failure signatures |
-| Completion | `.harness/tasks/<task_id>/feedback-note.json` | N/A (must be expanded to durable events before worktree disposal) |
-| Session end | `.harness/tasks/<task_id>/feedback-note.json` | N/A |
+| Scaffold complete | `<harness_root>/.harness/tasks/<task_id>/feedback-note.json` | Check config values against vocabulary |
+| Plan finalized | `<harness_root>/.harness/tasks/<task_id>/feedback-note.json` | Check for human corrections vs draft |
+| Each round end | `<harness_root>/.harness/tasks/<task_id>/feedback-note.json` | Check repeated failure signatures |
+| Completion | `<harness_root>/.harness/tasks/<task_id>/feedback-note.json` | N/A |
+| Session end | `<harness_root>/.harness/tasks/<task_id>/feedback-note.json` | N/A |
 
 ## Source Weights (for future reducer)
 
@@ -103,7 +103,7 @@ This is intentionally conservative. Single-run noise should not become protocol 
 Current reducer entry point:
 
 ```bash
-python ~/.asb/skills/harness/scripts/reduce_feedback.py \
+python ~/.asb/plugins/repos/agentic-harness/scripts/reduce_feedback.py \
   ~/.asb/state/harness-feedback/events.jsonl \
   --output ~/.asb/state/harness-feedback/candidates.json
 ```

@@ -10,10 +10,11 @@ Maintenance rules for `.harness/tasks/<task_id>/context.md` and cross-session re
 ## Current State
 - phase: B (run)
 - round: 12 / 50
+- harness_root: /absolute/path/to/repo
+- worktree: <task_slug> branch, path /absolute/path/.claude/worktrees/<task_slug>/
 - current_objective: "reduce inference latency below 200ms"
 - best_result: "76.5 latency score (round 9, commit abc1234)"
 - last_action: "round 11 attempted X, verifier failed (lint regression), reverted"
-- worktree: <task_id> branch, path .claude/worktrees/<task_id>/
 
 ## Working Memory
 - Observations about the codebase relevant to the task
@@ -32,7 +33,7 @@ Maintenance rules for `.harness/tasks/<task_id>/context.md` and cross-session re
 
 | Section | Contains | Update frequency |
 |---|---|---|
-| Current State | Phase, round counter, best result, last action, worktree info | Every round (overwrite) |
+| Current State | Phase, round counter, best result, last action, harness root, worktree info | Every round (overwrite) |
 | Working Memory | Codebase observations, patterns, dead ends | Every round (curate) |
 | Decisions | Committed choices with rationale | When a decision is made (append) |
 | Next Steps | Immediate priorities for upcoming rounds | Every round (full rewrite) |
@@ -60,7 +61,7 @@ Overwrite all fields every round. Fields must reflect the state after the round 
 
 ## Artifact Storage
 
-Every round's verification output goes to `.harness/tasks/<task_id>/artifacts/round-{N}/`. Store:
+Every round's verification output goes to `<harness_root>/.harness/tasks/<task_id>/artifacts/round-{N}/`. Store:
 - Full verification command stdout/stderr
 - Diff of changes attempted
 - Review outputs referenced by the evaluator
@@ -86,21 +87,23 @@ Do not store artifacts inline in context.md. Reference by path.
 On session start (fresh agent, no prior context in conversation), execute this sequence:
 
 ```
-1. Resolve current task                  -> explicit task_id, unique branch/task_slug, .harness/current-task, or sole task
-2. Verify worktree state                 -> confirm session is in the task's worktree; re-enter if needed
+0. Resolve harness root                  -> walk up for .harness/, git worktree list, or git rev-parse --show-toplevel
+1. Resolve current task                  -> explicit task_id, unique branch/task_slug, <harness_root>/.harness/current-task, or sole task
+2. Verify worktree state                 -> confirm session is in the task's worktree; re-enter if needed. Confirm harness root is accessible.
 3. Read task config.yaml                 -> task definition, boundaries, verification, evaluation, stop guards
 4. Read task context.md                  -> phase, progress, learnings, blockers
 5. Read task state.jsonl                 -> tail recent events, full scan if needed
 6. Read AGENTS.md                        -> protocol constraints, repo conventions
 ```
 
-After reading, verify recovery by confirming these five answers before proceeding:
+After reading, verify recovery by confirming these six answers before proceeding:
 
-1. Current phase and round number
-2. Best result so far (metric value or acceptance state, round, commit)
-3. Outstanding issues or blockers
-4. Worktree state (in expected worktree and branch, or needs re-entry)
-5. What to do next (from Next Steps)
+1. Harness root location and accessibility
+2. Current phase and round number
+3. Best result so far (metric value or acceptance state, round, commit)
+4. Outstanding issues or blockers
+5. Worktree state (in expected worktree and branch, or needs re-entry)
+6. What to do next (from Next Steps)
 
 If any answer is missing or contradictory between context.md and `state.jsonl`, resolve from `state.jsonl` (structured source of truth for facts) and update context.md before continuing.
 
@@ -135,11 +138,12 @@ safely without rewriting history.
 
 A fresh agent reading only `AGENTS.md` + task-scoped `.harness/` state must accurately answer:
 
-1. Current phase and round
-2. Best result so far and its commit
-3. Outstanding issues and blockers
-4. Worktree state (correct branch and path)
-5. What to do next
+1. Harness root location
+2. Current phase and round
+3. Best result so far and its commit
+4. Outstanding issues and blockers
+5. Worktree state (correct branch and path)
+6. What to do next
 
 If it cannot, context.md is stale or incomplete. Fix before running the next round.
 

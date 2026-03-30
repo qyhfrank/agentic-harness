@@ -40,7 +40,7 @@ Execute gates per `verification-gate.md` composite execution order:
 3. On pass or escalation, queue `human_review` if configured.
 4. Short-circuit on first mandatory deterministic `fail`.
 
-Capture full stdout/stderr to `.harness/tasks/<task_id>/artifacts/round-{N}/`.
+Capture full stdout/stderr to `<harness_root>/.harness/tasks/<task_id>/artifacts/round-{N}/`.
 
 ### 4. Evaluate
 
@@ -115,7 +115,7 @@ When `evaluation.metric.volatile: true` in config:
 
 ## Git Isolation
 
-Each active task works on branch `<task_id>` inside a worktree (see Worktree Isolation in `SKILL.md`). All commits, including AGENTS.md updates, stay on the task branch until the user merges via the Completion flow.
+Each active task works on branch `<task_slug>` inside a worktree (see Worktree Isolation in `SKILL.md`). All commits stay on the task branch until the user merges via the Completion flow. Harness state (`.harness/`) lives at the harness root, not in the worktree.
 
 ## Session Boundary
 

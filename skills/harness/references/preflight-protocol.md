@@ -33,9 +33,9 @@ Do not attempt auto-remediation. Return control to the caller.
 
 After all mandatory checks pass:
 
-1. Run all mandatory verification gates against current HEAD.
+1. Run all mandatory verification gates against current HEAD (in the code worktree CWD).
 2. Evaluate the baseline objective state and metric, if any.
-3. Append a `baseline_recorded` event to `state.jsonl`.
+3. Append a `baseline_recorded` event to `<harness_root>/.harness/tasks/<task_id>/state.jsonl`.
 4. If baseline verification fails, the task config is broken. Return to plan mode immediately.
 
 ## Preflight Output Format

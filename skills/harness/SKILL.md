@@ -33,23 +33,48 @@ Harness always uses task-scoped state:
 
 Single-task usage is just the case where only one task exists. It is not a second storage layout.
 
+## Harness Root
+
+`.harness/` lives at the **harness root**, which is separate from the code working directory (worktree). This decouples orchestration state (config, context, ledger, artifacts) from the code workspace so that discarding a worktree does not lose harness state.
+
+### Resolution Order
+
+Resolve the harness root once at session start, before any mode execution:
+
+1. Walk up from CWD looking for an existing `.harness/` directory (handles resume from any subdirectory)
+2. If inside a git worktree, resolve the main worktree root via `git worktree list --porcelain` (first entry)
+3. Fall back to `git rev-parse --show-toplevel` (repo root)
+
+### Workspace Heuristic
+
+After resolving, check whether the harness root's parent directory contains 2+ sibling git repos. If so, ask the user once whether to use the parent as the harness root instead (for multi-repo workspaces where several repos work closely together). Cache the answer in `.harness/config` so it is not asked again.
+
+### Two Roots
+
+| Root | Purpose | Lifecycle |
+|---|---|---|
+| Harness root | `.harness/` state (config, context, ledger, artifacts) | Persists across worktree create/discard |
+| Code root (CWD) | Code changes, git ops, verification commands | Worktree lifecycle |
+
+All `.harness/` reads and writes use the resolved harness root path. All code operations (propose, commit, verify) use the current working directory.
+
 ## Task Resolution
 
 Resolve the current task in this order:
 
 1. Explicit task identifier supplied by the user or command wrapper
 2. Current git branch name matching a unique task slug from an existing `<task_id>`
-3. `.harness/current-task`
-4. Sole task under `.harness/tasks/`
+3. `<harness_root>/.harness/current-task`
+4. Sole task under `<harness_root>/.harness/tasks/`
 
-If no task can be resolved, scaffold derives a task slug and task ID from the user's goal (see Task ID Generation) and sets `.harness/current-task` to the task ID.
+If no task can be resolved, scaffold derives a task slug and task ID from the user's goal (see Task ID Generation) and sets `<harness_root>/.harness/current-task` to the task ID.
 
 ## Task ID Generation
 
 Generate two related names from the user's goal:
 
 - `task_slug`: a meaningful kebab-case slug derived from the goal. Use this for branch names, worktree names, and other human-facing labels.
-- `task_id`: the durable harness storage ID of the form `NNN-<task_slug>`. Use this only for `.harness/tasks/<task_id>/` and `.harness/current-task`.
+- `task_id`: the durable harness storage ID of the form `NNN-<task_slug>`. Use this only for `<harness_root>/.harness/tasks/<task_id>/` and `<harness_root>/.harness/current-task`.
 
 The slug must be deterministic enough that a human can recognize the task from the ID alone.
 
@@ -59,7 +84,7 @@ Rules:
 2. Build `task_slug` with lowercase `[a-z0-9-]` only, no leading, trailing, or consecutive hyphens. Keep the human-readable slug within 36 characters so the full `task_id` fits the existing 40-character budget once `NNN-` is prepended.
 3. For non-ASCII goals: translate the verb and object literally to English (not paraphrase). Preserve ASCII proper nouns, API names, and technical terms as-is. If a stable translation is not possible, ask the user for a short English label.
 4. If the derived slug is empty after sanitization (e.g., goal was all emoji or punctuation), ask the user for a task name instead of proceeding.
-5. Allocate `task_id` by scanning `.harness/tasks/` for numeric prefixes and picking the smallest unused zero-padded three-digit prefix, then append `-<task_slug>`. Example: `000-fix-auth-timeout-bug`.
+5. Allocate `task_id` by scanning `<harness_root>/.harness/tasks/` for numeric prefixes and picking the smallest unused zero-padded three-digit prefix, then append `-<task_slug>`. Example: `000-fix-auth-timeout-bug`.
 6. The numeric prefix belongs only to harness storage IDs. Do not prepend it to branch names, worktree names, or other human-facing labels unless the user explicitly asks.
 7. If branch or worktree naming needs collision handling, keep that logic on `task_slug` only (for example, `fix-auth-timeout-bug-2`). Do not rewrite the already allocated `task_id`.
 8. There is no `default` fallback. Missing Goal Gate guarantees a goal exists before scaffold runs. If somehow no slug can be derived, ask the user — never silently create a task.
@@ -76,12 +101,12 @@ Examples:
 
 ## Mode Detection
 
-Detect mode from explicit argument first, then auto-infer from repo state and the resolved task:
+Detect mode from explicit argument first, then auto-infer from harness root state and the resolved task:
 
 ```
 Explicit `/harness scaffold|plan|run` --> use that mode
 
-Otherwise auto-infer:
+Otherwise auto-infer (all paths relative to harness root):
   .harness/ does not exist                          --> scaffold
   current task missing                              --> scaffold
   current task config has `draft: true`            --> plan
@@ -99,15 +124,16 @@ If auto-inferred mode is `run` but the user's message implies planning intent (a
 
 ## Worktree Isolation
 
-Harness defaults to running inside a git worktree. This keeps iteration work isolated from the main branch until the user explicitly merges.
+Harness defaults to running code changes inside a git worktree. This keeps iteration work isolated from the main branch until the user explicitly merges. `.harness/` state lives at the harness root, not inside the worktree.
 
 ### Enforcement
 
-After mode detection, before executing any mode:
+After mode detection and harness root resolution, before executing any mode:
 
-1. Check if the session is already inside a worktree (e.g., CWD is under `.claude/worktrees/`).
-2. If already in a worktree, proceed normally.
-3. If not in a worktree, create one before writing any files or making changes.
+1. Resolve harness root (see Harness Root). If scaffold mode and `.harness/` does not exist, create it at the resolved harness root now.
+2. Check if the session is already inside a worktree (e.g., CWD is under `.claude/worktrees/`).
+3. If already in a worktree, proceed normally.
+4. If not in a worktree, create one before making code changes.
 
 ### Worktree Creation
 
@@ -116,7 +142,7 @@ Call `EnterWorktree` with name `<task_slug>`. The worktree branch is `<task_slug
 - **Task ID known** (plan, run, resume, or scaffold with explicit goal): derive or resolve the task ID first, then use its slug portion for worktree and branch naming.
 - **Task ID unknown** (scaffold without goal): trigger the Missing Goal Gate to obtain the goal, derive the task slug, allocate the task ID, then create the worktree from the slug. Do not create a worktree before the goal is known.
 
-After entering the worktree, proceed with the detected mode.
+After entering the worktree, record the worktree path in the task's context.md.
 
 ### Opting Out
 
@@ -139,7 +165,7 @@ Read `references/scaffold-protocol.md` and follow it.
 
 Also read `references/feedback-protocol.md` for the feedback note step at scaffold completion.
 
-Produces: `.harness/current-task`, `.harness/tasks/<task_id>/config.yaml`, `.harness/tasks/<task_id>/context.md`, `.harness/tasks/<task_id>/state.jsonl`, `.harness/tasks/<task_id>/artifacts/`, and an `AGENTS.md` update.
+Produces: `<harness_root>/.harness/current-task`, `<harness_root>/.harness/tasks/<task_id>/config.yaml`, `<harness_root>/.harness/tasks/<task_id>/context.md`, `<harness_root>/.harness/tasks/<task_id>/state.jsonl`, `<harness_root>/.harness/tasks/<task_id>/artifacts/`, and an `AGENTS.md` update.
 
 Idempotent: re-running scaffold only fills gaps, never overwrites existing files.
 
@@ -214,7 +240,9 @@ If the user chooses to merge:
 ### Keep or Discard
 
 - **Keep**: call `ExitWorktree` with action `keep`. Report the worktree path and branch name so the user can return later.
-- **Discard**: ensure feedback notes have been expanded to durable events in `~/.asb/state/harness-feedback/events.jsonl` before removal. Then call `ExitWorktree` with action `remove` (set `discard_changes: true` if needed). Confirm with the user before discarding uncommitted work.
+- **Discard**: call `ExitWorktree` with action `remove` (set `discard_changes: true` if needed). Confirm with the user before discarding uncommitted work. Since `.harness/` lives at the harness root (not in the worktree), task state is preserved even after worktree removal.
+
+Append a `task_disposed` event to `state.jsonl` recording the disposition (see `references/state-ledger.md`).
 
 If the session is not in a harness-created worktree (user opted out or was already in-place), skip this section entirely.
 
@@ -234,13 +262,14 @@ These are not mandatory for every round. Invoke when the trigger condition match
 
 ## Cross-Cutting Rules
 
-1. **Boundary is law.** Never modify files outside `boundary.mutable`. Never touch `boundary.immutable`.
-2. **Verification is mandatory.** Every proposed change must pass through the verification gate before being kept.
-3. **Evaluation is distinct.** Verifiers produce safety and quality signals; evaluators decide frontier updates, completion, and termination.
-4. **State is append-only.** Never edit or delete existing events in `state.jsonl`. Only append.
-5. **Context survives sessions.** Update context.md every round so a fresh agent can resume.
-6. **Config is the contract.** All runtime behavior derives from config.yaml. No implicit defaults.
-7. **Reviewer context is bounded.** Reviewers get the diff, relevant files, AGENTS.md, and config excerpts they need. They do not get proposer reasoning as authority.
+1. **Harness root owns state.** All `.harness/` reads and writes target the resolved harness root, never the worktree CWD.
+2. **Boundary is law.** Never modify files outside `boundary.mutable`. Never touch `boundary.immutable`.
+3. **Verification is mandatory.** Every proposed change must pass through the verification gate before being kept.
+4. **Evaluation is distinct.** Verifiers produce safety and quality signals; evaluators decide frontier updates, completion, and termination.
+5. **State is append-only.** Never edit or delete existing events in `state.jsonl`. Only append.
+6. **Context survives sessions.** Update context.md every round so a fresh agent can resume.
+7. **Config is the contract.** All runtime behavior derives from config.yaml. No implicit defaults.
+8. **Reviewer context is bounded.** Reviewers get the diff, relevant files, AGENTS.md, and config excerpts they need. They do not get proposer reasoning as authority.
 
 ## Reference Index
 

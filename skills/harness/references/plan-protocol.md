@@ -11,7 +11,7 @@ Phase A: interactive config finalization. Guide the user from draft `config.yaml
 
 ### 1. Load Current State
 
-Resolve the current task, then read its `config.yaml` and `context.md`. Identify which fields are already filled vs empty.
+Resolve the harness root and current task, then read the task's `config.yaml` and `context.md` from `<harness_root>/.harness/tasks/<task_id>/`. Identify which fields are already filled vs empty.
 
 ### 2. Task Definition
 

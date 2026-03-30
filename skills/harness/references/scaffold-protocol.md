@@ -6,7 +6,7 @@ Phase 0: diagnose the repository and create task-scoped `.harness/` infrastructu
 
 - Goal is known (enforced by SKILL.md Missing Goal Gate before scaffold loads)
 - Current directory is a git repository
-- Session is inside a worktree (enforced by SKILL.md Worktree Isolation before scaffold loads)
+- Harness root is resolved (see SKILL.md Harness Root)
 
 If not in a git repo, stop and tell the user.
 
@@ -42,29 +42,32 @@ If ambiguous, list candidates and let the user confirm during plan phase.
 Harness always uses task-scoped state.
 
 Default scaffold behavior:
-- Create `.harness/` if missing
+- Create `<harness_root>/.harness/` if missing
 - Derive `task_slug` from the user's goal per the Task ID Generation rules in `SKILL.md`
 - Allocate `task_id` as `NNN-<task_slug>` (for example, "fix the auth timeout bug" -> `000-fix-auth-timeout-bug`)
-- Create `.harness/tasks/<task_id>/` using the allocated ID
-- Write the allocated ID to `.harness/current-task`
+- Create `<harness_root>/.harness/tasks/<task_id>/` using the allocated ID
+- Write the allocated ID to `<harness_root>/.harness/current-task`
 
 If a task is already resolved, scaffold only fills gaps for that task.
 
 ### 4. Create Task Directory
 
+All paths below are at the resolved harness root.
+
 ```
-.harness/
-├── current-task
-└── tasks/
-    └── <task_id>/
-        ├── config.yaml      # draft config
-        ├── context.md       # initial context
-        ├── state.jsonl      # empty; baseline event added during preflight
-        └── artifacts/       # empty, for future round outputs
+<harness_root>/
+└── .harness/
+    ├── current-task
+    └── tasks/
+        └── <task_id>/
+            ├── config.yaml      # draft config
+            ├── context.md       # initial context
+            ├── state.jsonl      # empty; baseline event added during preflight
+            └── artifacts/       # empty, for future round outputs
 ```
 
 Idempotency rules:
-- If `.harness/` exists, check each file individually
+- If `<harness_root>/.harness/` exists, check each file individually
 - Never overwrite an existing file
 - Only create missing files
 - If all files exist, report "scaffold already complete" and suggest `plan` mode
@@ -75,6 +78,8 @@ Idempotency rules:
 
 ```yaml
 draft: true  # remove this line when config is finalized
+
+harness_root: "<absolute path to harness root>"
 
 task:
   id: "<task_id>"
@@ -127,10 +132,11 @@ rollback:
   preserve_failed_experiments: true
 
 state:
-  ledger: ".harness/tasks/<task_id>/state.jsonl"
+  ledger: "<harness_root>/.harness/tasks/<task_id>/state.jsonl"
 ```
 
 Pre-fill what can be inferred:
+- `harness_root` from the resolved harness root path (always absolute)
 - `task.description` from the user's stated goal
 - `task.source` if the user referenced a plan or spec file
 - `evaluation.objective`: use `optimize` if the goal is open-ended metric improvement; use `satisfy` if the goal has concrete completion criteria
@@ -146,6 +152,8 @@ Leave everything else empty with `# fill during plan` comments when helpful.
 ## Current State
 - phase: scaffold (complete)
 - round: 0 / -
+- harness_root: <absolute path>
+- worktree: <to be set when worktree is created>
 - current_objective: "<goal>"
 - best_result: "baseline not recorded yet"
 
@@ -181,11 +189,13 @@ Append a harness section to the project's AGENTS.md (create if missing):
 
 This project uses the harness autonomous iteration engine.
 
-- Current task pointer: `.harness/current-task`
-- Task configs: `.harness/tasks/<task_id>/config.yaml`
-- Task state: `.harness/tasks/<task_id>/state.jsonl`
-- Task context: `.harness/tasks/<task_id>/context.md`
-- Task artifacts: `.harness/tasks/<task_id>/artifacts/`
+Harness state lives at the **harness root** (original repo root), not inside worktrees.
+
+- Current task pointer: `<harness_root>/.harness/current-task`
+- Task configs: `<harness_root>/.harness/tasks/<task_id>/config.yaml`
+- Task state: `<harness_root>/.harness/tasks/<task_id>/state.jsonl`
+- Task context: `<harness_root>/.harness/tasks/<task_id>/context.md`
+- Task artifacts: `<harness_root>/.harness/tasks/<task_id>/artifacts/`
 
 Run `/harness plan` to configure, `/harness run` to execute.
 ```
@@ -202,12 +212,13 @@ Summarize what was created and what gaps were found:
 ```
 Scaffold complete.
 
+Harness root: /path/to/repo
 Created:
-  .harness/current-task
-  .harness/tasks/fix-auth-timeout-bug/config.yaml (draft)
-  .harness/tasks/fix-auth-timeout-bug/context.md
-  .harness/tasks/fix-auth-timeout-bug/state.jsonl
-  .harness/tasks/fix-auth-timeout-bug/artifacts/
+  <harness_root>/.harness/current-task
+  <harness_root>/.harness/tasks/fix-auth-timeout-bug/config.yaml (draft)
+  <harness_root>/.harness/tasks/fix-auth-timeout-bug/context.md
+  <harness_root>/.harness/tasks/fix-auth-timeout-bug/state.jsonl
+  <harness_root>/.harness/tasks/fix-auth-timeout-bug/artifacts/
 
 Repository assessment:
   [ready]   Test: jest (42 test files, coverage configured)
@@ -218,7 +229,7 @@ Repository assessment:
 Next: run `/harness plan` to finalize config.yaml
 ```
 
-Report the worktree branch and path alongside the file listing so the user knows where the harness state lives.
+Report the harness root path and worktree branch alongside the file listing so the user knows where state and code live.
 
 ## Feedback Note
 
