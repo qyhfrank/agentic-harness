@@ -41,11 +41,15 @@ All profiles return a structured verdict:
 **Verdict:** pass | fail | needs_escalation
 **Findings:** F-001, F-002, ... (or "none")
 **Assessment:** <one-line summary>
+**Coverage:** requirements checked, files reviewed, risk dimensions assessed
+**Unchecked:** areas not reviewed or not reviewable via static analysis
 ```
 
-- `pass`: no blocking findings, caller may proceed
+- `pass`: no blocking findings within checked scope. Caller may proceed, but `pass` is bounded by coverage — it does not assert correctness beyond what was checked.
 - `fail`: blocking findings exist, caller must address
 - `needs_escalation`: cannot determine, needs broader context or human judgment
+
+Coverage fields are mandatory when verdict is `pass`. "No findings" is only meaningful when accompanied by coverage evidence (see `verification-gate.md` stage 5).
 
 Single-reviewer verdicts are gate inputs, not completion oracles. When used inside `/harness`, a single-reviewer pass does not grant close authority.
 

@@ -146,6 +146,12 @@ Pre-fill what can be inferred:
 - `evaluation.objective`: use `optimize` if the goal is open-ended metric improvement; use `satisfy` if the goal has concrete completion criteria
 - `boundary.mutable` and `boundary.immutable` from repo analysis when the structure is unambiguous
 
+When test infrastructure is `missing` or `partial`:
+- Pre-fill `verification.mandatory` with the cheapest available command backstops (build, typecheck, lint, dry-run, docs render — whatever the repo supports)
+- Suggest `agent_review` via `/critique --spec` and `/critique --quality` as additional mandatory gates
+- Set `close_authority.type` to `confirmed_review` instead of `command_backed`
+- Note in `context.md` that oracle lifting should be a priority: convert review findings into command gates as the task progresses
+
 Leave everything else empty with `# fill during plan` comments when helpful.
 
 ### 6. Generate Initial context.md

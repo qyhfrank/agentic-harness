@@ -127,11 +127,16 @@ tasks:
     full_text: "<complete task description>"
     acceptance: "<what counts as done>"
     implementation_protocol: tdd_required
+    risk_tier: low                    # low | medium | high
+    checkpoint_required: false        # true for high-risk tasks
     dependencies: []
     status: pending
 ```
 
-Planning uses this field when dispatching the implementer. If a task omits it, inherit the plan-level protocol or default to `tdd_required`.
+Field semantics:
+- `implementation_protocol`: inherited from plan-level if omitted, default `tdd_required`
+- `risk_tier`: inferred from task characteristics (public API, security, data migration → high; cross-file behavior change → medium; internal refactor, docs → low). Drives checkpoint decisions in standalone mode and harness close authority in embedded mode.
+- `checkpoint_required`: when true, standalone mode pauses for human review before proceeding to next task; embedded mode signals harness to require `human_review` close authority for this round
 
 ## Handling Implementer Status
 
