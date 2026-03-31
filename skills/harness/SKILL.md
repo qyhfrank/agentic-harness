@@ -132,7 +132,7 @@ After mode detection and harness root resolution, before executing any mode:
 
 ### Worktree Creation
 
-Call `EnterWorktree` with name `<task_slug>`. The worktree branch is `<task_slug>`.
+Create or enter a worktree named `<task_slug>` using the current platform's worktree workflow. The worktree branch is `<task_slug>`.
 
 - **Task ID known** (plan, run, resume, or scaffold with explicit goal): derive or resolve the task ID first, then use its slug portion for worktree and branch naming.
 - **Task ID unknown** (scaffold without goal): trigger the Missing Goal Gate to obtain the goal, derive the task slug, allocate the task ID, then create the worktree from the slug. Do not create a worktree before the goal is known.
@@ -218,7 +218,7 @@ Run preflight checks first. On pass, enter the loop defined in `references/loop-
 When the harness loop terminates (evaluation result `complete`, budget exhausted, stagnation, or user-initiated stop), and the session is running inside a worktree created by Worktree Isolation:
 
 1. Report the final result summary (rounds completed, best frontier, acceptance criteria status).
-2. Proactively ask the user how to handle the worktree changes using `AskUserQuestion`:
+2. Proactively ask the user how to handle the worktree changes:
    - **Merge to main** -- squash-merge the worktree branch into main and remove the worktree.
    - **Keep worktree** -- leave the worktree and branch intact for manual review or continued work.
    - **Discard** -- remove the worktree and discard all changes.
@@ -228,14 +228,14 @@ When the harness loop terminates (evaluation result `complete`, budget exhausted
 If the user chooses to merge:
 
 1. Ensure all harness rounds are committed (no uncommitted state).
-2. Switch back to the original directory with `ExitWorktree` action `keep`.
-3. Merge the worktree branch into the original branch (the one active before `EnterWorktree`, typically `main`): `git merge --squash <worktree-branch>`, then commit with message `harness(<task_slug>): <one-line summary of what the harness achieved>`.
+2. Leave the worktree and return to the original branch/root outside the worktree.
+3. Merge the worktree branch into the original branch (typically `main`): `git merge --squash <worktree-branch>`, then commit with message `harness(<task_slug>): <one-line summary of what the harness achieved>`.
 4. Clean up: `git branch -D <worktree-branch>` and remove the worktree directory.
 
 ### Keep or Discard
 
-- **Keep**: call `ExitWorktree` with action `keep`. Report the worktree path and branch name so the user can return later.
-- **Discard**: call `ExitWorktree` with action `remove` (set `discard_changes: true` if needed). Confirm with the user before discarding uncommitted work. Since `.harness/` lives at the harness root (not in the worktree), task state is preserved even after worktree removal.
+- **Keep**: leave the worktree intact. Report the worktree path and branch name so the user can return later.
+- **Discard**: remove the worktree through the current platform's worktree-removal flow. Confirm with the user before discarding uncommitted work. Since `.harness/` lives at the harness root (not in the worktree), task state is preserved even after worktree removal.
 
 Append a `task_disposed` event to `state.jsonl` recording the disposition (see `references/state-ledger.md`).
 

@@ -1,6 +1,6 @@
 ---
 name: fanout
-description: Use when multiple perspectives on the same question improve quality, or when lightweight parallel dispatch to independent subtasks is needed. Triggers on /fanout, /orchestrate, "fan out", "parallel agents", "split across agents", "get multiple opinions", "sample N agents".
+description: Use when multiple perspectives on the same question improve quality, or when lightweight parallel dispatch to independent subtasks is needed. Triggers on /fanout, "fan out", "parallel agents", "split across agents", "get multiple opinions", "sample N agents".
 user_invocable: true
 argument-hint: <task> [-m split|sample] [-a <type>[:<count>]]... [-b]
 ---
@@ -16,7 +16,7 @@ Parallel agent dispatch. For review workflows, prefer `/critique`. For large-sca
 | Flag | Default | Description |
 | ---- | ------- | ----------- |
 | `-m` | auto-infer | `split` (data-parallel, no aggregation) / `sample` (multi-sample, synthesize) |
-| `-a` | 5 x default model | Number = count of default type; `type` = that type x5; `type:N` = specific |
+| `-a` | 5 x `auto` | Number = count of inferred worker type; `type` = that type x5; `type:N` = specific. Supported types: `auto`, `thinker`, `doer`, `codex`, `opus` |
 | `-b` | off | Background child context |
 
 ```
@@ -37,7 +37,7 @@ Parallel agent dispatch. For review workflows, prefer `/critique`. For large-sca
 
 - Applicable: 2+ independent subtasks, no shared state, agents don't compete for same files
 - Not applicable: correlated failures, or full system state required to judge
-- Broad research -> breadth (split); narrow hard problems -> focused depth (`-a codex` for Thinker)
+- Broad research -> breadth (split); narrow hard problems -> focused depth (`-a thinker` or explicit `-a codex`)
 - Minimum effective fan-out, but no artificial low caps on independent tasks
 
 ## Prompt Crafting
@@ -61,17 +61,29 @@ Fill-in: role = `leaf` (default); depth = parent + 1; max = inherited (may tight
 
 1. **Parse arguments + infer mode**
 
-2. **Launch agents**: issue all parallel calls in a single response
+2. **Run the pre-flight gate**
+   - If the task fits locally, keep it local.
+   - If the task is a deterministic wait or scriptable monitor, use tool execution instead of child contexts.
+   - Only continue when multiple child contexts materially improve the result.
+
+3. **Choose worker type**
+   - No `-a`: infer `thinker` for planning, review, root-cause analysis, and architecture decisions; infer `doer` for implementation, testing, and mechanical refactoring.
+   - `-a thinker` / `-a doer`: use the current platform's Thinker / Doer mapping.
+   - `-a codex` / `-a opus`: explicit runner override.
+   - If a requested runner is unavailable on this platform, fail fast and say so instead of silently substituting.
+
+4. **Launch agents**: issue all parallel calls in a single response
    - Default foreground (wait for all results); `-b` enables background (only when parent has independent work)
-   - `-a opus` (default): platform default child worker
+   - `auto`, `thinker`, `doer`: route through the current platform's archetype mapping
    - `-a codex`: load `/codex-exec`, invoke `codex exec` via Bash
-   - Mixed (`-a codex:3 -a opus:2`): route by type, unify results
+   - `-a opus`: use the platform's Opus-class worker only when that runner exists
+   - Mixed (`-a thinker:3 -a doer:2`, `-a codex:3 -a opus:2`): route by type, unify results
 
-3. **Collect + failure handling**: partial failure -> retry (max 2) -> 2+ successes continue, 1 = degrade to single result, all fail = report error
+5. **Collect + failure handling**: partial failure -> retry (max 2) -> 2+ successes continue, 1 = degrade to single result, all fail = report error
 
-4. **Post-processing** (mode-dependent)
+6. **Post-processing** (mode-dependent)
    - split: return each agent's output separately. No aggregation.
    - sample: inject N outputs into prompt, synthesize final answer
      > "Identify common points and differences, compare whether evidence points to the same source, synthesize evidence-backed strengths, discard unsupported conclusions"
 
-5. **Verify (mandatory for sample mode)**: go back to source and verify synthesized conclusions against actual code, docs, or command output. Thinking models (Codex/Thinker) are strong at finding problems but prone to overthinking -- they may invent issues or propose fixes that add unnecessary complexity. Always verify findings against source before surfacing to the user. Skip verification only for pure creative tasks with no codebase or executable environment.
+7. **Verify (mandatory for sample mode)**: go back to source and verify synthesized conclusions against actual code, docs, or command output. Thinking models (Codex/Thinker) are strong at finding problems but prone to overthinking -- they may invent issues or propose fixes that add unnecessary complexity. Always verify findings against source before surfacing to the user. Skip verification only for pure creative tasks with no codebase or executable environment.

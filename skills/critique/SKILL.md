@@ -1,7 +1,7 @@
 ---
 name: critique
 description: Use when code changes need structured review with anchored findings, including spec compliance gates, code quality gates, or full multi-angle reviews. Triggers on /critique, "review this", "code review", "quality check", "spec compliance check", "find blocking issues".
-argument-hint: <what to review> [--spec|--quality] [-a codex|opus] [--refactor]
+argument-hint: <what to review> [--spec|--quality] [-a thinker|doer|codex|opus] [--refactor]
 ---
 
 Arguments: $ARGUMENTS
@@ -28,7 +28,7 @@ Arguments:
 - `--spec`: profile=spec, engine=single
 - `--quality`: profile=quality, engine=single
 - No flag: profile=full, engine=fanout
-- `-a codex|opus`: agent type (passed to `/fanout` in fanout engine)
+- `-a thinker|doer|codex|opus`: explicit worker override for the full-profile fanout engine. No flag -> let `/fanout` infer the worker type.
 - `--refactor`: include optional refactor proposals (full profile only)
 
 ## Verdict Envelope
@@ -36,14 +36,14 @@ Arguments:
 All profiles return a structured verdict:
 
 ```markdown
-**Verdict:** pass | fail | needs-escalation
+**Verdict:** pass | fail | needs_escalation
 **Findings:** F-001, F-002, ... (or "none")
 **Assessment:** <one-line summary>
 ```
 
 - `pass`: no blocking findings, caller may proceed
 - `fail`: blocking findings exist, caller must address
-- `needs-escalation`: cannot determine, needs broader context or human judgment
+- `needs_escalation`: cannot determine, needs broader context or human judgment
 
 Single-reviewer verdicts are gate inputs, not completion oracles. When used inside `/harness`, a single-reviewer pass does not grant close authority.
 
@@ -192,7 +192,7 @@ Full profile 的主 agent 复核输出：
 
 ### Fanout Engine (full, default)
 
-1. 解析参数：当 `$ARGUMENTS` 中出现 `-a codex` 时，传递给 `/fanout`。先通过 Skill tool 加载 `/codex-exec`，确保命令模板可用
+1. 解析参数：当 `$ARGUMENTS` 中出现 `-a` 参数时，传递给 `/fanout`。若请求了 `codex` worker，先通过 Skill tool 加载 `/codex-exec`，确保命令模板可用
 2. 加载 `/fanout`
 3. 选择 Strategy R 或 Strategy H，并使用 `-m sample` 及解析出的 `-a` 参数启动审阅 subagents
 4. 收集输出后做 sample 聚合

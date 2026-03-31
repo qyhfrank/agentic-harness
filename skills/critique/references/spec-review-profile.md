@@ -54,11 +54,11 @@ Read the implementation code and verify:
 
 Return a verdict envelope:
 
-**Verdict:** pass | fail | needs-escalation
+**Verdict:** pass | fail | needs_escalation
 **Findings:** (if any, use F-NNN format with file:line anchors)
 **Assessment:** one-line summary
 
 - `pass`: all requirements met, no extra work, no misunderstandings
 - `fail`: issues found (list specifically what's missing or extra)
-- `needs-escalation`: cannot determine from available context
+- `needs_escalation`: cannot determine from available context
 ```

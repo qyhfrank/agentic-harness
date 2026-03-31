@@ -59,6 +59,6 @@ Each finding must have an anchor (file:line) and be supported by current source 
 
 After all findings, return:
 
-**Verdict:** pass | fail | needs-escalation
+**Verdict:** pass | fail | needs_escalation
 **Findings:** F-001, F-002, ... (or "none")
 **Assessment:** Ready to merge? [Yes/No/With fixes] + 1-2 sentence reasoning

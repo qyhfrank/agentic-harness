@@ -7,20 +7,20 @@ Two archetypes, selected by task nature:
 - **Thinker**: depth-first reasoning. Planning, review, root-cause analysis, architecture decisions. Strong at finding problems; fix suggestions tend to add complexity -- use findings, apply subtraction to fixes.
 - **Doer**: execution-first. Implementation, testing, mechanical refactoring.
 
-Default to Thinker for multi-step reasoning or quality judgment. Default to Doer for rapid code changes. When consuming Thinker outputs, prefer the simplest fix over the agent's proposed fix.
+Default to Thinker for multi-step reasoning or quality judgment. Default to Doer for rapid code changes. When consuming Thinker outputs, treat findings as hypotheses, verify them against source, and prefer the simplest fix over the agent's proposed fix.
 
 Per-platform mapping:
 
 | Type | Claude Code | OpenCode | Codex CLI |
 |---|---|---|---|
 | Thinker | `/codex-exec` | `@agent-gpt-5.4-xhigh` | native `gpt-5.4 xhigh` |
-| Doer | self / Agent / Task | `@agent-opus` | `gpt-5.4 xhigh` |
+| Doer | self / Agent / Task | `@agent-opus` | native editable child context |
 
 Platform-specific notes:
 
 - **Claude Code**: Thinker delegates to Codex via `/codex-exec`. Doer uses the native editable child-context surfaces.
 - **OpenCode**: Thinker uses `@agent-gpt-5.4-xhigh`. Doer uses `@agent-opus`.
-- **Codex CLI**: Only OpenAI models are available. Always uses `gpt-5.4 xhigh`.
+- **Codex CLI**: Only OpenAI models are available. Thinker maps to `gpt-5.4 xhigh`. Doer should prefer a faster or lower-effort native coding worker when configurable, such as `gpt-5.1-codex-mini` or `gpt-5.4` at lower effort.
 
 ## Execution Surfaces
 

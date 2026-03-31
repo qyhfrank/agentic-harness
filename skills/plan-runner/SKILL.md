@@ -143,11 +143,17 @@ The manifest is the authoritative source. TodoWrite (if used) is a projection.
 Append-only JSONL ledger at `.agents/plan-runner.jsonl`. Events:
 
 - `task_started`: `{task_id, subject, timestamp}`
-- `review_completed`: `{task_id, profile: "spec"|"quality", verdict: "pass"|"fail", timestamp}`
+- `review_completed`: `{task_id, profile: "spec"|"quality", verdict: "pass"|"fail"|"needs_escalation", timestamp}`
 - `task_completed`: `{task_id, timestamp}`
-- `run_completed`: `{final_verdict, timestamp}`
+- `run_completed`: `{final_verdict: "pass"|"fail"|"needs_escalation", timestamp}`
 
 启动时：若 ledger 存在且有未完成任务，从 ledger 恢复进度。
+
+### Review Verdict Handling (Standalone)
+
+- `pass` -> continue to the next gate or task
+- `fail` -> fix the issue and re-run the same review gate
+- `needs_escalation` -> record the verdict, pause the current task, and surface the blocker to the caller or user. Do not coerce it into `pass` or `fail`.
 
 ### Embedded Mode (in /harness)
 
@@ -168,6 +174,7 @@ Never:
 - 省略场景上下文
 - spec compliance 有问题时接受"差不多"
 - 在 spec pass 之前开始 quality review
+- 把 `needs_escalation` 当成 `pass` 或 `fail`
 - Embedded 模式下运行 `/critique` 或驱动 task loop（harness 负责 verification 和 round 循环）
 - Embedded 模式下写自己的 ledger（harness 拥有 state）
 
