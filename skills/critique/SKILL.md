@@ -106,7 +106,7 @@ row 与 prompt 生成规则：
 
 - `critique` 默认由拥有最终 review judgment 的最高层上下文调用。
 - 若当前上下文只是 implementer、reviewer、researcher 之类的内容型 child worker，通常不应再次递归调用 `/critique`。
-- `/plan-runner` 的 per-task review 通过 `/critique --spec` 和 `/critique --quality`（single engine）调用。最终全量 review 通过默认 `/critique`（full profile）。
+- `/planning` 的 per-task review 通过 `/critique --spec` 和 `/critique --quality`（single engine）调用。最终全量 review 通过默认 `/critique`（full profile）。
 
 ## Output Contract
 

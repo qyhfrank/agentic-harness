@@ -67,7 +67,7 @@ Evaluate in order before spawning any child context. Stop at first match:
 7. Read-only/advisory, parent has independent work? -> **background child context**
 8. None of the above? -> **local** (default)
 
-Depth > 1 only when a child itself needs to fan out (e.g., `/plan-runner` task needs `/critique` internally). Most tasks work fine with depth 1 + leaf workers. Once delegated, parent becomes coordinator only -- do not duplicate the delegated work locally.
+Depth > 1 only when a child itself needs to fan out (e.g., `/planning` task needs `/critique` internally). Most tasks work fine with depth 1 + leaf workers. Once delegated, parent becomes coordinator only -- do not duplicate the delegated work locally.
 
 ## Agent Context Card
 
@@ -91,7 +91,7 @@ Workflows compose in layers: task loop -> pluggable stage -> `/fanout` -> leaf a
 | Skill | Layer | Purpose | Composes |
 |---|---|---|---|
 | `/harness` | Task loop | Autonomous verified iteration: scaffold, plan, run | `/critique` at review gates |
-| `/plan-runner` | Task loop | Sequential plan execution: standalone runs full loop with `/critique` gates; embedded provides plan parsing + implementer dispatch while harness drives rounds and verification | `/critique` (standalone); harness verification gates (embedded) |
+| `/planning` | Task loop | Plan lifecycle: write structured plans from goals/specs, execute task-by-task with `/critique` gates (standalone) or as implementer dispatcher (embedded in harness) | `/critique` (standalone); harness verification gates (embedded) |
 | `/batch` | Task loop | Parallel worktree fan-out (5-30 workers, each opens a PR) | own dispatch |
 | `/critique` | Pluggable stage | Review stage: spec/quality/full profiles, single/fanout engines | `/fanout` (fanout engine only) |
 | `/fanout` | Dispatch engine | Parallel dispatch + aggregation (split / sample) | -- |

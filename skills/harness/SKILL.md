@@ -252,7 +252,7 @@ Harness operates within the ASB ecosystem. At specific points, prefer invoking a
 | Doom loop: pivot needed after diagnosis | `brainstorming` | Generate alternative strategies instead of guessing |
 | `agent_review` or discovery review verification gate | `/critique` | Review stage with profile selection: spec, quality, or full multi-angle review |
 | Run phase: complex multi-file change in Propose step | `brainstorming` | When the change is non-trivial and benefits from exploring alternatives |
-| Run phase: proposal is a multi-task plan with independent tasks | `/plan-runner` | Embedded mode: plan-runner parses plan + dispatches implementer; harness drives rounds and runs `/critique` verification gates. |
+| Run phase: proposal is a multi-task plan with independent tasks | `/planning` | Embedded mode: planning parses plan + dispatches implementer; harness drives rounds and runs `/critique` verification gates. |
 
 These are not mandatory for every round. Invoke when the trigger condition matches. If the change is simple and the path is clear, skip straight to implementation.
 
