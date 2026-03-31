@@ -1,163 +1,19 @@
 ---
 name: planning
-description: Use when a multi-step task needs a structured implementation plan, when executing an existing plan task-by-task with staged /critique review gates, or when a spec/requirements document is ready for task decomposition. Triggers on /planning, "write a plan", "create implementation plan", "execute this plan", "run the plan", or when brainstorming hands off a finalized spec.
+description: Use when executing an implementation plan task-by-task with staged /critique review gates via foreground child contexts. Triggers on /planning, "execute this plan", "run the plan", or when a plan/task list is ready for structured execution.
 user_invocable: true
-argument-hint: [write|run] <goal or plan-path>
+argument-hint: <plan-path or inline task list>
 ---
 
 Arguments: $ARGUMENTS
 
 # Planning
 
-Structured plan lifecycle: generate implementation plans from goals/specs, then execute them task-by-task with staged review gates.
+Sequential plan executor: read a plan, implement each task via a child context, verify with `/critique` review gates, repeat until complete.
 
-Two phases: **write** (generate a structured plan from goal/spec) and **run** (execute tasks sequentially via child contexts with `/critique` gates).
+Plan creation is handled by native plan mode or `/critique --plan` for review. This skill focuses on structured execution.
 
-## Mode Detection
-
-```
-Explicit `/planning write` or `/planning run` → use that mode
-
-Auto-infer:
-  Goal/spec provided, no existing plan     → write
-  Existing plan file or task manifest       → run
-  Goal provided + full lifecycle requested  → write then run
-```
-
----
-
-## Phase: Write
-
-Generate a structured implementation plan from a goal, spec, or requirements.
-
-**Announce at start:** "Using the planning skill to create the implementation plan."
-
-### Output Location
-
-Do not hardcode plan file paths. Resolution order:
-
-1. Caller specifies path explicitly (e.g., harness passes `.harness/tasks/<task_id>/plan.md`)
-2. Agent infers from context (project conventions, active harness task, working directory)
-3. Ask the user if ambiguous
-
-### Scope Check
-
-If the spec covers multiple independent subsystems, suggest breaking into separate plans — one per subsystem. Each plan should produce working, testable software on its own.
-
-### File Structure
-
-Before defining tasks, map out which files will be created or modified:
-
-- Design units with clear boundaries and well-defined interfaces
-- Prefer smaller, focused files over large ones that do too much
-- Files that change together should live together; split by responsibility, not by technical layer
-- In existing codebases, follow established patterns
-
-### Task Granularity
-
-Each step is one action (2-5 minutes).
-
-### Implementation Protocol
-
-Every plan must declare an execution protocol in `Execution Summary`:
-
-- `tdd_required` -- default for features, bug fixes, refactors, and behavior changes
-- `tdd_preferred` -- use test-first flow when practical, but allow a justified fallback
-- `direct` -- for config-only, docs-only, generated code, or similar work where full red-first sequencing is not the right fit
-
-When unsure, prefer `tdd_required`.
-
-For `tdd_required` tasks, the default per-task cycle is:
-
-1. Write the failing test
-2. Run it to verify it fails
-3. Implement the minimal code to pass
-4. Run tests to verify they pass
-5. Commit
-
-### Plan Document Structure
-
-````markdown
-# [Feature Name] Implementation Plan
-
-> **For agentic workers:** Use `/planning run` (if subagents available) or follow steps directly. Steps use checkbox syntax for tracking.
-
-**Goal:** [One sentence]
-**Architecture:** [2-3 sentences]
-**Tech Stack:** [Key technologies]
-
----
-
-## Execution Summary
-
-**Mutable Paths:** `src/foo/**`, `tests/foo/**`
-**Immutable Paths:** `infra/**`
-**Implementation Protocol:** `tdd_required`
-**Mandatory Verification:** `pytest tests/foo -q`
-**Guard Checks:** `ruff check src tests`
-**Acceptance Criteria:**
-- valid input parses correctly
-- invalid input returns structured error
-
----
-
-Below is the default task skeleton for `tdd_required`. For `direct`, replace the RED/GREEN steps with the smallest correct implement -> verify -> commit sequence. For `tdd_preferred`, keep the TDD shape unless the task has a justified exception.
-
-### Task N: [Component Name]
-**Task ID:** task-N
-**Depends on:** task-M (or "none")
-**Implementation Protocol Override:** `direct` (optional, omit when using plan default)
-
-**Files:**
-- Create: `exact/path/to/file.py`
-- Modify: `exact/path/to/existing.py`
-- Test: `tests/exact/path/to/test.py`
-
-- [ ] **Step 1: Write the failing test**
-  ```python
-  def test_specific_behavior():
-      result = function(input)
-      assert result == expected
-  ```
-
-- [ ] **Step 2: Run test to verify it fails**
-  Run: `pytest tests/path/test.py::test_name -v`
-  Expected: FAIL
-
-- [ ] **Step 3: Write minimal implementation**
-  [complete code]
-
-- [ ] **Step 4: Run test to verify it passes**
-  Expected: PASS
-
-- [ ] **Step 5: Commit**
-````
-
-Remember: exact file paths always, complete code (not "add validation"), exact commands with expected output.
-When a task involves mocks, test doubles, or test-only seams, read `references/testing-anti-patterns.md` and fold the relevant guidance into the implementer prompt.
-
-### Plan Review Loop
-
-After each chunk (delimited by `## Chunk N: <name>`, each ≤1000 lines):
-
-1. Dispatch plan reviewer (see `./plan-reviewer-prompt.md`) in a foreground child context
-2. Issues found: fix and re-dispatch
-3. Approved: proceed to next chunk
-4. Loop exceeds 5 iterations: surface to user
-
-### Write Completion
-
-Save the plan and report: "Plan complete and saved to `<path>`. Ready to execute?"
-
-If caller is harness (embedded), return the plan path. If standalone, suggest execution workflow.
-
----
-
-## Phase: Run
-
-Sequential task executor: read a plan, implement each task via a child context, verify with `/critique` review gates, repeat until complete.
-
-### Execution Modes
+## Execution Modes
 
 | Mode | When | Planning does | Harness does |
 |---|---|---|---|
@@ -166,7 +22,7 @@ Sequential task executor: read a plan, implement each task via a child context, 
 
 **Standalone**: planning owns the full lifecycle — task sequencing, implementer dispatch, `/critique --spec`, `/critique --quality`, final `/critique` (full), and its own ledger.
 
-**Embedded**: planning becomes a plan adapter + implementer dispatcher. Harness drives one round per task:
+**Embedded**: planning is a plan adapter + implementer dispatcher only. Harness drives one round per task:
 
 ```
 harness round N (for task N):
@@ -176,33 +32,39 @@ harness round N (for task N):
   record:   harness writes state.jsonl
 ```
 
-Planning does not drive the task loop, run reviews, maintain its own ledger, or run final critique in embedded mode.
+## Implementation Protocol
 
-### Dispatch Model
+Each task carries an implementation protocol that planning passes to the implementer:
 
-#### Standalone
+- `tdd_required` -- default for features, bug fixes, refactors, and behavior changes
+- `tdd_preferred` -- use test-first flow when practical, but allow a justified fallback
+- `direct` -- for config-only, docs-only, generated code, or similar work where full red-first sequencing is not the right fit
 
-- Implementer and review gates are all foreground child contexts.
-- Controller consumes results sequentially. Do not background these.
+When unsure, prefer `tdd_required`. For `tdd_required` tasks, the implementer must provide RED/GREEN evidence.
+
+When a task involves mocks, test doubles, or test-only seams, read `references/testing-anti-patterns.md` and fold the relevant guidance into the implementer prompt.
+
+## Dispatch Model
+
+### Standalone
+
+- Implementer and review gates are all foreground child contexts, consumed sequentially.
 - Spec and quality review go through `/critique --spec` and `/critique --quality`.
-- Planning passes the effective implementation protocol to the implementer and expects RED/GREEN evidence back when the protocol requires test-first execution.
 - Orchestration stays in controller. Child workers do not invoke `/fanout` or `/critique`.
 
-#### Embedded (in /harness)
+### Embedded (in /harness)
 
 - Planning only dispatches the implementer child context.
-- Harness runs `/critique --spec` and `/critique --quality` as verification gates.
-- Planning still computes the effective implementation protocol and passes it to the implementer.
-- Planning does not invoke `/critique` directly — harness owns the verification step.
+- Harness owns `/critique` gates. Planning does not invoke `/critique` directly.
 
-### Size Gate
+## Size Gate
 
 - Multiple independent tasks or cross-file tasks needing staged verification: use this skill.
 - Single low-risk task (one-file fix, obvious local change): stay local.
 - If coordination overhead exceeds implementation effort: too heavy for this skill.
 - Once chosen, keep the full gate: implement -> spec review -> quality review. No shortcuts.
 
-### The Process (Standalone)
+## The Process (Standalone)
 
 In embedded mode, harness drives the round loop and runs verification gates; planning only provides the implementer dispatch.
 
@@ -248,7 +110,7 @@ digraph process {
 }
 ```
 
-### Input Normalization
+## Input Normalization
 
 Planning accepts tasks from multiple sources:
 
@@ -269,9 +131,9 @@ tasks:
     status: pending
 ```
 
-Planning uses this field when dispatching the implementer. If a task omits it, inherit the plan-level `Implementation Protocol`.
+Planning uses this field when dispatching the implementer. If a task omits it, inherit the plan-level protocol or default to `tdd_required`.
 
-### Handling Implementer Status
+## Handling Implementer Status
 
 **DONE:** Standalone: enter `/critique --spec`. Embedded: return to harness for verification gates.
 
@@ -287,9 +149,9 @@ Planning uses this field when dispatching the implementer. If a task omits it, i
 
 Do not ignore escalation. Do not retry the same model without changes.
 
-### Task Ledger
+## Task Ledger
 
-#### Standalone Mode
+### Standalone Mode
 
 Append-only JSONL ledger at `.agents/planning.jsonl`. Events:
 
@@ -300,13 +162,13 @@ Append-only JSONL ledger at `.agents/planning.jsonl`. Events:
 
 On startup: if ledger exists with incomplete tasks, resume from ledger.
 
-#### Review Verdict Handling (Standalone)
+### Review Verdict Handling (Standalone)
 
 - `pass` -> continue to next gate or task
 - `fail` -> fix and re-run the same review gate
 - `needs_escalation` -> record verdict, pause task, surface blocker to caller/user
 
-#### Embedded Mode (in /harness)
+### Embedded Mode (in /harness)
 
 Do not write `.agents/planning.jsonl`. Instead:
 
@@ -319,17 +181,17 @@ Do not write `.agents/planning.jsonl`. Instead:
 ## Red Flags
 
 Never:
-- Start implementation on main/master without user consent
-- Skip any review stage (spec or quality) in standalone mode
+- Implement on main/master without user consent
+- Skip spec or quality review in standalone mode
 - Continue with unresolved issues
 - Launch multiple implementers in parallel (file conflicts)
 - Let child context read the plan file (provide full text in prompt)
-- Omit scene-setting context
+- Omit scene-setting context in implementer prompt
 - Accept "close enough" on spec compliance
 - Start quality review before spec passes
 - Treat `needs_escalation` as `pass` or `fail`
-- In embedded mode: run `/critique` or drive task loop (harness owns verification and round cycling)
-- In embedded mode: write own ledger (harness owns state)
+- Embedded mode: run `/critique` or drive task loop (harness owns these)
+- Embedded mode: write own ledger (harness owns state)
 
 Implementer asks questions: answer fully, provide context as needed.
 Reviewer finds issues: implementer fixes -> reviewer re-reviews -> loop until pass.
@@ -338,7 +200,6 @@ Child context fails: launch new child context to fix. Do not fix manually (conte
 ## Prompt Templates
 
 - `./implementer-prompt.md` -- implementer child context prompt
-- `./plan-reviewer-prompt.md` -- plan document reviewer prompt
 
 ## References
 
@@ -347,7 +208,7 @@ Child context fails: launch new child context to fix. Do not fix manually (conte
 ## Integration
 
 Required workflow skills:
-- `/critique` -- review gates (spec, quality, full profiles)
+- `/critique` -- review gates (spec, quality, plan, full profiles)
 
 Related skills:
-- `superpowers:brainstorming` -- design exploration before plan writing
+- `superpowers:brainstorming` -- design exploration before planning

@@ -91,8 +91,8 @@ Workflows compose in layers: task loop -> pluggable stage -> `/fanout` -> leaf a
 | Skill | Layer | Purpose | Composes |
 |---|---|---|---|
 | `/harness` | Task loop | Autonomous verified iteration: scaffold, plan, run | `/critique` at review gates |
-| `/planning` | Task loop | Plan lifecycle: write structured plans from goals/specs, execute task-by-task with `/critique` gates (standalone) or as implementer dispatcher (embedded in harness) | `/critique` (standalone); harness verification gates (embedded) |
+| `/planning` | Task loop | Sequential plan execution: task-by-task with `/critique` gates (standalone) or implementer dispatcher (embedded in harness) | `/critique` (standalone); harness verification gates (embedded) |
 | `/batch` | Task loop | Parallel worktree fan-out (5-30 workers, each opens a PR) | own dispatch |
-| `/critique` | Pluggable stage | Review stage: spec/quality/full profiles, single/fanout engines | `/fanout` (fanout engine only) |
+| `/critique` | Pluggable stage | Review stage: spec/quality/plan/full profiles, single/fanout engines | `/fanout` (fanout engine only) |
 | `/fanout` | Dispatch engine | Parallel dispatch + aggregation (split / sample) | -- |
 | `/codex-exec` | Thinker adapter | Wraps `codex exec` for deep reasoning tasks | -- |

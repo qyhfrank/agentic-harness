@@ -1,7 +1,7 @@
 ---
 name: critique
-description: Use when code changes need structured review with anchored findings, including spec compliance gates, code quality gates, or full multi-angle reviews. Triggers on /critique, "review this", "code review", "quality check", "spec compliance check", "find blocking issues".
-argument-hint: <what to review> [--spec|--quality] [-a thinker|doer|codex|opus] [--refactor]
+description: Use when code changes need structured review with anchored findings, including spec compliance gates, code quality gates, plan/config review, or full multi-angle reviews. Triggers on /critique, "review this", "code review", "quality check", "spec compliance check", "review the plan", "review the config", "find blocking issues".
+argument-hint: <what to review> [--spec|--quality|--plan] [-a thinker|doer|codex|opus] [--refactor]
 ---
 
 Arguments: $ARGUMENTS
@@ -16,6 +16,7 @@ Review stage abstraction: select a profile and engine, get structured findings w
 |---|---|---|
 | `spec` | Spec compliance: does implementation match requirements? | `single` |
 | `quality` | Code quality: clean, tested, maintainable? | `single` |
+| `plan` | Plan/config review: complete, coherent, ready for execution? | `single` |
 | `full` | Multi-angle review with role diversity / cross-validation | `fanout` |
 
 | Engine | How |
@@ -27,6 +28,7 @@ Arguments:
 
 - `--spec`: profile=spec, engine=single
 - `--quality`: profile=quality, engine=single
+- `--plan`: profile=plan, engine=single
 - No flag: profile=full, engine=fanout
 - `-a thinker|doer|codex|opus`: explicit worker override for the full-profile fanout engine. No flag -> let `/fanout` infer the worker type.
 - `--refactor`: include optional refactor proposals (full profile only)
@@ -62,6 +64,14 @@ Read `references/quality-review-profile.md` and `references/code-reviewer.md`.
 Input: BASE_SHA, HEAD_SHA, implementation description, plan/requirements reference.
 
 Prerequisite: spec compliance must pass first when both profiles are used in sequence.
+
+## Profile: plan
+
+Read `references/plan-review-profile.md`.
+
+Input: planning artifact (plan document, harness config.yaml, or task strategy) + goal/spec reference.
+
+Use after: plan mode produces a plan, harness scaffold/plan finishes config.yaml, or any planning artifact is ready for execution. Checks completeness, goal alignment, boundary coverage, verification readiness.
 
 ## Profile: full
 
@@ -205,4 +215,5 @@ Full profile 的主 agent 复核输出：
 |---|---|---|
 | `references/spec-review-profile.md` | Spec compliance reviewer prompt | spec profile |
 | `references/quality-review-profile.md` | Code quality reviewer prompt wrapper | quality profile |
+| `references/plan-review-profile.md` | Plan/config reviewer prompt | plan profile |
 | `references/code-reviewer.md` | Base code review agent prompt + policy | quality profile, full profile |

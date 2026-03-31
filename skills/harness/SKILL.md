@@ -248,6 +248,7 @@ Harness operates within the ASB ecosystem. At specific points, prefer invoking a
 | Trigger | Skill | When |
 |---|---|---|
 | Plan phase: exploring task scope, boundary, verification, or evaluation strategy | `brainstorming` | Before filling config fields that require creative or architectural judgment |
+| Scaffold/plan phase complete: config.yaml finalized | `/critique --plan` | Review config completeness, boundary coverage, verification readiness before entering run |
 | Doom loop: same error repeats N times | `systematic-debugging` | Before attempting pivot -- diagnose root cause first |
 | Doom loop: pivot needed after diagnosis | `brainstorming` | Generate alternative strategies instead of guessing |
 | `agent_review` or discovery review verification gate | `/critique` | Review stage with profile selection: spec, quality, or full multi-angle review |
