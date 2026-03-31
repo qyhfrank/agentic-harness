@@ -11,7 +11,7 @@ For detailed guidance on agent types, orchestration primitives, workflow selecti
 3. **Parent owns verification.** Subagent findings are hypotheses; parent verifies against source before surfacing to the user.
 4. **No cycles.** Do not invoke an orchestrator or runner already in the call stack.
 5. **Budget is hard.** Every new agent context (including retries) consumes `child_budget`. Budget exhausted means continue locally or return blocked. A child may tighten but never expand inherited budget.
-6. **Background delegation is read-only/advisory only.** Code edits require foreground child contexts, Task/subagent workflows, or worktrees. Plugin orchestration contracts (depth, limits, nesting) are plugin-source rules; check `~/.asb/plugins/` first.
+6. **Background delegation is read-only/advisory by default.** Code edits require foreground child contexts, Task/subagent workflows, or worktrees. Exception: `batch` may use editable background child contexts when each worker is isolated in its own worktree with no shared mutable state.
 
 ## Agent Context Card
 

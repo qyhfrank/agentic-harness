@@ -43,9 +43,9 @@ All agent-coordination skills are workflows. They compose platform primitives (A
 
 ## Workflow Selection
 
-See `references/workflow-selection.md` for the pattern-based routing table.
+See `references/workflow-selection.md` for the pattern-based routing table. Domain-specific workflows are checked first; `orchestrate` is the general-purpose fallback.
 
-Each workflow skill declares its own trigger conditions. The skill matching protocol in `rules/engineering.md` handles concrete routing. This section provides orientation, not hard routing.
+Not every agent task needs a multi-agent workflow. Single advisory child contexts (research, second opinion) and single implementation helpers use platform primitives directly (Agent tool, codex-exec), not a workflow skill.
 
 ## Delegation Heuristics
 

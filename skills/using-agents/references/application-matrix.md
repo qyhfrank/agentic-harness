@@ -1,22 +1,22 @@
-# Orchestration Platform Matrix
+# Application Capability Matrix
 
-Platform capability matrix for execution surfaces. This file is platform-specific by design; keep runtime skills and prompt templates platform-neutral and map to these capabilities only when routing.
+Capability matrix for execution surfaces across ASB-supported applications. Keep runtime skills and prompt templates platform-neutral; map to these capabilities only when routing.
 
 ## Execution Surfaces
 
-| Capability | Claude Code | OpenCode | Codex CLI |
-|---|---|---|---|
-| Foreground tool execution (Bash etc.) | R/W | R/W | R/W |
-| Background tool execution (background Bash) | R/W | Not supported | R/W |
-| Foreground child context (blocking agent) | R/W | R/W | R/W |
-| Background child context (background agent) | R/W | Read-only (no shell, no file edit) | R/W |
-| Team orchestration (TeamCreate + Task + SendMessage) | Supported | Not supported | Not supported |
+| Capability | Claude Code | OpenCode | Codex CLI | Cursor | Trae / Trae-CN | Coco |
+|---|---|---|---|---|---|---|
+| Foreground tool execution (Bash etc.) | R/W | R/W | R/W | R/W | R/W | R/W |
+| Background tool execution | R/W | Not supported | R/W | Not supported | Not supported | Not supported |
+| Foreground child context (blocking agent) | R/W | R/W | R/W | Not supported | Not supported | Not supported |
+| Background child context | R/W | Read-only | R/W | Not supported | Not supported | Not supported |
+| Team orchestration (TeamCreate) | Supported | Not supported | Not supported | Not supported | Not supported | Not supported |
 
 Notes:
-- OpenCode `delegate` is a read-only background child-context surface. Not tool-enabled, unsuitable for implementation work.
-- Claude Code `run_in_background` supports full tool access including file edits and shell.
-- Codex CLI supports both foreground and background for tools and child contexts, all with R/W access. Background child contexts use async spawn-and-wait patterns.
-- Codex CLI does not support Claude models. All agents run on OpenAI models only.
+- **Claude Code**: Full capability. Background tool and child context both R/W. TeamCreate for multi-agent coordination.
+- **OpenCode**: Background child context (`delegate`) is read-only only. No background tool execution.
+- **Codex CLI**: Full foreground/background for tools and child contexts. Only OpenAI models (no Claude Opus).
+- **Cursor, Trae, Trae-CN, Coco**: Foreground tool execution only. No native child context or background execution. Multi-agent workflows require manual orchestration or are not applicable.
 - Do not treat platform-specific names (`delegate`, `run_in_background`) as cross-platform concepts.
 
 ## Agent Type Platform Mapping

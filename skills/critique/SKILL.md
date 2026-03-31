@@ -1,6 +1,11 @@
 ---
 name: critique
-description: Run a structured multi-agent code review with role diversity + BoN + GSA, then produce a single blocking-only report with source anchors.
+description: >
+  Use when code changes need structured multi-agent review before merging,
+  when you want multiple review perspectives on a diff or codebase area,
+  or when a quality gate requires blocking-only findings with source anchors.
+  Triggers: /critique, "review this", "code review", "quality check",
+  "find blocking issues", "multi-angle review".
 argument-hint: <what to review> [-a codex|opus] [--refactor]
 ---
 
@@ -28,7 +33,7 @@ Arguments: $ARGUMENTS
 - Per-task review（例如 `plan-runner` 的 spec/quality loop）继续使用各自的 leaf reviewer prompt；不要在这些 leaf worker 里升级成全局 critique。
 - 平台 dispatch 语法和 child-context 概念边界见 `../using-agents/references/architecture.md`。
 
-Per-task review（在 plan-runner 内）不走 `/critique`，直接用 `./code-reviewer.md` 模板 dispatch 单个 reviewer。
+Per-task review（在 plan-runner 内）不走 `/critique`，直接用 `../plan-runner/code-quality-reviewer-prompt.md`（封装层）dispatch 单个 reviewer。
 
 本 skill 是对 `/orchestrate` 的一层薄封装：
 
