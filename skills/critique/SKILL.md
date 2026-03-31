@@ -25,10 +25,10 @@ Arguments: $ARGUMENTS
 
 - `critique` 默认由拥有最终 review judgment 和源码复核责任的最高层上下文调用。
 - 若当前上下文只是 implementer、reviewer、researcher 之类的内容型 child worker，通常不应再次递归调用 `/critique`。
-- Per-task review（例如 `subagent-driven-dev` 的 spec/quality loop）继续使用各自的 leaf reviewer prompt；不要在这些 leaf worker 里升级成全局 critique。
-- 平台 dispatch 语法和 child-context 概念边界见 `../using-agents/references/orchestration-architecture.md`。
+- Per-task review（例如 `plan-runner` 的 spec/quality loop）继续使用各自的 leaf reviewer prompt；不要在这些 leaf worker 里升级成全局 critique。
+- 平台 dispatch 语法和 child-context 概念边界见 `../using-agents/references/architecture.md`。
 
-Per-task review（在 subagent-driven-dev 内）不走 `/critique`，直接用 `./code-reviewer.md` 模板 dispatch 单个 reviewer。
+Per-task review（在 plan-runner 内）不走 `/critique`，直接用 `./code-reviewer.md` 模板 dispatch 单个 reviewer。
 
 本 skill 是对 `/orchestrate` 的一层薄封装：
 

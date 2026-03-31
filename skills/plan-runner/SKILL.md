@@ -1,11 +1,11 @@
 ---
-name: subagent-driven-dev
+name: plan-runner
 description: Use when executing a written implementation plan in the current session and the work should be controlled task-by-task with foreground child contexts and staged review gates.
 ---
 
 Arguments: $ARGUMENTS
 
-# Subagent-Driven Development
+# Plan Runner
 
 Controller for executing a written implementation plan through foreground child contexts and staged review gates.
 
@@ -14,7 +14,7 @@ Controller for executing a written implementation plan through foreground child 
 - 这个技能拥有的是前台 critical-path child workflow：implementer、spec reviewer、code quality reviewer 都默认是 foreground child contexts。
 - 不要把这些 per-task child contexts 放到 background 里跑，因为 controller 需要按顺序消费结果。
 - 不要让 implementer 或 reviewer child 再去调用 `/orchestrate` 或 `/critique`。orchestration 继续留在 controller。
-- 平台 dispatch 语法不写进 prompt template；prompt template 只定义 role、输入、输出和 stop rule。平台映射见 `../using-agents/references/orchestration-architecture.md`。
+- 平台 dispatch 语法不写进 prompt template；prompt template 只定义 role、输入、输出和 stop rule。平台映射见 `../using-agents/references/architecture.md`。
 
 ## When to Use
 

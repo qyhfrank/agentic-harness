@@ -22,7 +22,7 @@ Two archetypes, selected by task nature:
 
 Default to Thinker for tasks requiring multi-step reasoning or quality judgment. Default to Doer for tasks requiring rapid code changes.
 
-Platform-specific adapters and capability differences are documented in `references/orchestration-platform-matrix.md`.
+Platform-specific adapters and capability differences are documented in `references/platform-matrix.md`.
 
 ## Orchestration Primitives
 
@@ -64,7 +64,7 @@ Once work is delegated, the parent's role becomes coordination only. Do not perf
 | Skill | Purpose |
 |---|---|
 | `harness` | Autonomous verified iteration: scaffold, plan, run loop |
-| `subagent-driven-dev` | Plan execution with implementer + staged review gates |
+| `plan-runner` | Plan execution with implementer + staged review gates |
 | `batch` | Large-scale parallel worktree fan-out (5-30 workers, each opens a PR) |
 
 ### Agent Type Adapters

@@ -15,14 +15,14 @@ Shared architecture note for child-context orchestration across rules, skills, a
 
 These are concept-layer terms. Reusable rules and prompt templates should speak in these terms first, then map to platform surfaces only where needed.
 
-For platform capability differences, read `orchestration-platform-matrix.md`.
+For platform capability differences, read `platform-matrix.md`.
 
 ## Ownership
 
 - `rules/agent-orchestration.md` is the authoritative always-on contract for child-context hard rules (depth, budget, Agent Context Card).
 - `skills/orchestrate/SKILL.md` owns parallel dispatch engine behavior: item mode, BoN, GSA, and aggregation flow.
 - `skills/critique/SKILL.md` owns review policy and how review uses orchestration.
-- `skills/subagent-driven-dev/SKILL.md` owns the per-task foreground child workflow for implementation and review loops.
+- `skills/plan-runner/SKILL.md` owns the per-task foreground child workflow for implementation and review loops.
 - `~/.asb/skills/batch/SKILL.md` owns large-scale worktree fan-out, but consumes the shared orchestration contract.
 - `~/.asb/skills/codex-exec/SKILL.md` is a Thinker agent type adapter, not the global orchestration contract.
 - Skills such as `brainstorming`, `writing-plans`, `simplify`, and `ingest-pptx` are workflow consumers. They may spawn child contexts, but they should not define platform dispatch syntax or redefine orchestration policy.
@@ -32,7 +32,7 @@ For platform capability differences, read `orchestration-platform-matrix.md`.
 Keep these layers distinct.
 
 - `task orchestration` means driving a task toward completion through stages, gates, state, and evaluation. This is where `harness` lives: task loop, scaffold/plan/run, verification gates, evaluation, and task state.
-- `execution orchestration` means choosing and coordinating execution surfaces such as tool execution, child contexts, review fan-out, GSA, or runner adapters. This is where `agent-orchestration` rule, `orchestrate`, `critique`, `subagent-driven-dev`, and `batch` live.
+- `execution orchestration` means choosing and coordinating execution surfaces such as tool execution, child contexts, review fan-out, GSA, or runner adapters. This is where `agent-orchestration` rule, `orchestrate`, `critique`, `plan-runner`, and `batch` live.
 
 `harness` may invoke execution-orchestration skills, but it should not redefine foreground/background execution surfaces or platform dispatch semantics. Conversely, execution-orchestration rules should not absorb the harness task loop.
 
@@ -48,7 +48,7 @@ Keep these layers distinct.
 
 ## Platform Mapping
 
-Platform surfaces differ. Keep shared skills and prompt templates platform-neutral, and use `orchestration-platform-matrix.md` for concrete capability mapping.
+Platform surfaces differ. Keep shared skills and prompt templates platform-neutral, and use `platform-matrix.md` for concrete capability mapping.
 
 ## Prompt Template Rule
 
@@ -72,7 +72,7 @@ The controller skill or platform adapter is responsible for wrapping a prompt bo
 - deterministic waiters or scriptable monitors: prefer tool execution, not a child context
 - `orchestrate`: use when multiple independent child contexts are needed and the current context owns synthesis.
 - `critique`: use when review policy needs orchestrated coverage and the current context owns final review judgment.
-- `subagent-driven-dev`: use for critical-path implementer/reviewer loops. These child contexts are foreground by default.
+- `plan-runner`: use for critical-path implementer/reviewer loops. These child contexts are foreground by default.
 - `batch`: use for worktree-isolated background fan-out at large scale.
 - `codex-exec`: use when Codex is explicitly requested or selected as the Thinker adapter.
 
