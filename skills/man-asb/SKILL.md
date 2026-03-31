@@ -102,7 +102,7 @@ enabled = ["docs", "deploy"]
 enabled = ["reviewer", "planner"]
 
 [skills]
-enabled = ["visual-reader", "orchestrate"]
+enabled = ["visual-reader", "fanout"]
 
 [hooks]
 enabled = ["pre-commit-lint"]

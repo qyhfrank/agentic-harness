@@ -1,11 +1,6 @@
 ---
 name: harness
-description: >
-  Use when the user wants an agent to autonomously iterate on a codebase with
-  verified feedback loops. Triggers: /harness, "set up a harness", "run harness",
-  "scaffold harness", "autonomous iteration", "verified code loop", "harness plan",
-  "harness run", or when the user describes a task that needs repeated
-  propose-verify-keep/discard cycles against a test suite or metric.
+description: Use when the user wants an agent to autonomously iterate on a codebase with verified feedback loops. Triggers on /harness, "set up a harness", "run harness", "scaffold harness", "autonomous iteration", "verified code loop", "harness plan", "harness run", or when the task needs repeated propose-verify-keep/discard cycles against a test suite or metric.
 user_invocable: true
 argument-hint: "[scaffold|plan|run] <goal description>"
 ---
@@ -255,8 +250,9 @@ Harness operates within the ASB ecosystem. At specific points, prefer invoking a
 | Plan phase: exploring task scope, boundary, verification, or evaluation strategy | `brainstorming` | Before filling config fields that require creative or architectural judgment |
 | Doom loop: same error repeats N times | `systematic-debugging` | Before attempting pivot -- diagnose root cause first |
 | Doom loop: pivot needed after diagnosis | `brainstorming` | Generate alternative strategies instead of guessing |
-| `agent_review` or discovery review verification gate | `critique` | Use as the structured review engine for agent-review gates |
+| `agent_review` or discovery review verification gate | `/critique` | Review stage with profile selection: spec, quality, or full multi-angle review |
 | Run phase: complex multi-file change in Propose step | `brainstorming` | When the change is non-trivial and benefits from exploring alternatives |
+| Run phase: proposal is a multi-task plan with independent tasks | `/plan-runner` | Embedded mode: plan-runner parses plan + dispatches implementer; harness drives rounds and runs `/critique` verification gates. |
 
 These are not mandatory for every round. Invoke when the trigger condition matches. If the change is simple and the path is clear, skip straight to implementation.
 
