@@ -20,8 +20,8 @@ For platform capability differences, read `application-matrix.md`.
 ## Ownership
 
 - `rules/agent-orchestration.md` is the authoritative always-on contract for child-context hard rules (depth, budget, Agent Context Card).
-- `skills/orchestrate/SKILL.md` owns parallel dispatch engine behavior: item mode, BoN, GSA, and aggregation flow.
-- `skills/critique/SKILL.md` owns review policy and how review uses orchestration.
+- `skills/orchestrate/SKILL.md` owns parallel dispatch engine behavior: item mode, BoN, GSA, and aggregation flow. General-purpose workflow, often composed by domain-specific workflows.
+- `skills/critique/SKILL.md` owns review policy and how review uses orchestration. Domain-specific workflow that composes `orchestrate`.
 - `skills/plan-runner/SKILL.md` owns the per-task foreground child workflow for implementation and review loops.
 - `~/.asb/skills/batch/SKILL.md` owns large-scale worktree fan-out, but consumes the shared orchestration contract.
 - `~/.asb/skills/codex-exec/SKILL.md` is a Thinker agent type adapter, not the global orchestration contract.

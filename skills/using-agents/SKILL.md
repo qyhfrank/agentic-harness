@@ -9,9 +9,11 @@ description: >
 
 # Using Agents
 
-Entry point for multi-agent orchestration in ASB. Provides agent type selection, orchestration primitive overview, workflow routing, and a complete skill index.
+Entry point for multi-agent orchestration in ASB. Provides agent type selection, workflow overview, routing, and a complete skill index.
 
 Hard constraints (max_depth, budget, Agent Context Card) live in the always-on `agent-orchestration` rule. This skill adds the detailed guidance loaded on demand.
+
+Platform capabilities (what each application supports) are documented in `references/application-matrix.md`. The actual primitives are platform-provided tools (Agent, Task, TeamCreate, background Bash, codex exec), not ASB skills. All ASB skills that coordinate agents are workflows at various levels of generality.
 
 ## Agent Types
 
@@ -24,14 +26,20 @@ Default to Thinker for tasks requiring multi-step reasoning or quality judgment.
 
 Platform-specific adapters and capability differences are documented in `references/application-matrix.md`.
 
-## Orchestration Primitives
+## Workflows
 
-Reusable coordination mechanisms. They define HOW to coordinate agents, not WHAT task to perform. The caller supplies the task content and decides what to do with results.
+All agent-coordination skills are workflows. They compose platform primitives (Agent tool, Task, TeamCreate, background Bash, codex exec) into reusable patterns with varying levels of domain specificity.
 
-- **`orchestrate`**: parallel fan-out + aggregation. Three modes: Per-Item (split tasks), Best-of-N (sample and vote), GSA (sample and synthesize). Use when multiple independent subtasks or perspectives are needed and the current context owns final synthesis.
-- **`critique`**: review policy layer over `orchestrate`. Adds role diversity or homogeneous cross-validation, reviewer output contracts, and main-agent source verification. Use for structured multi-agent review.
+### General-purpose
 
-Selection: independent parallel work -> `orchestrate`. Review with coverage guarantees -> `critique`.
+- **`orchestrate`**: parallel fan-out + aggregation. Three modes: Per-Item (split tasks), Best-of-N (sample and vote), GSA (sample and synthesize). No domain logic; caller supplies content and decides what to do with results. Often composed by other workflows internally.
+
+### Domain-specific
+
+- **`critique`**: structured multi-agent review. Adds review strategy (Role-Diverse / Homogeneous), reviewer output contracts, severity levels, and main-agent source verification. Composes `orchestrate` for dispatch.
+- **`plan-runner`**: plan execution with staged review gates. Per-task: implementer → spec review → quality review. Sequential foreground child contexts.
+- **`harness`**: autonomous verified iteration. Scaffold → plan → run loop with propose-verify-evaluate-keep/discard cycle, state ledger, and worktree isolation.
+- **`batch`**: large-scale parallel worktree fan-out. Research → decompose → spawn 5-30 isolated workers → each opens a PR. Distinct from `orchestrate` by having a research/planning phase, worktree isolation, and PR-per-worker output.
 
 ## Workflow Selection
 
@@ -52,26 +60,28 @@ Once work is delegated, the parent's role becomes coordination only. Do not perf
 
 ## Skill Index
 
-### Primitives (coordination mechanisms)
+### Workflows
+
+General-purpose:
 
 | Skill | Purpose |
 |---|---|
-| `orchestrate` | Parallel dispatch engine: Per-Item, Best-of-N, GSA |
+| `orchestrate` | Parallel dispatch + aggregation (Per-Item / BoN / GSA). Composable by other workflows. |
+
+Domain-specific:
+
+| Skill | Purpose |
+|---|---|
 | `critique` | Structured multi-agent review with role diversity |
-
-### Workflows (complete lifecycles)
-
-| Skill | Purpose |
-|---|---|
-| `harness` | Autonomous verified iteration: scaffold, plan, run loop |
 | `plan-runner` | Plan execution with implementer + staged review gates |
+| `harness` | Autonomous verified iteration: scaffold, plan, run loop |
 | `batch` | Large-scale parallel worktree fan-out (5-30 workers, each opens a PR) |
 
 ### Agent Type Adapters
 
 | Skill | Purpose |
 |---|---|
-| `codex-exec` | Thinker runner adapter: wraps `codex exec` for deep reasoning tasks |
+| `codex-exec` | Thinker adapter: wraps `codex exec` for deep reasoning tasks |
 
 ### Related Independent Skills
 
