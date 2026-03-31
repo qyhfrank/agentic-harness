@@ -1,22 +1,22 @@
 # Application Capability Matrix
 
-Capability matrix for execution surfaces across ASB-supported applications. Keep runtime skills and prompt templates platform-neutral; map to these capabilities only when routing.
+Capability matrix for execution surfaces. Only verified applications are listed. Keep runtime skills and prompt templates platform-neutral; map to these capabilities only when routing.
 
 ## Execution Surfaces
 
-| Capability | Claude Code | OpenCode | Codex CLI | Cursor | Trae / Trae-CN | Coco |
-|---|---|---|---|---|---|---|
-| Foreground tool execution (Bash etc.) | R/W | R/W | R/W | R/W | R/W | R/W |
-| Background tool execution | R/W | Not supported | R/W | Not supported | Not supported | Not supported |
-| Foreground child context (blocking agent) | R/W | R/W | R/W | Not supported | Not supported | Not supported |
-| Background child context | R/W | Read-only | R/W | Not supported | Not supported | Not supported |
-| Team orchestration (TeamCreate) | Supported | Not supported | Not supported | Not supported | Not supported | Not supported |
+| Capability | Claude Code | OpenCode | Codex CLI |
+|---|---|---|---|
+| Foreground tool execution (Bash etc.) | R/W | R/W | R/W |
+| Background tool execution | R/W | Not supported | R/W |
+| Foreground child context (blocking agent) | R/W | R/W | R/W |
+| Background child context | R/W | Read-only | R/W |
+| Team orchestration (TeamCreate) | Supported | Not supported | Not supported |
 
 Notes:
 - **Claude Code**: Full capability. Background tool and child context both R/W. TeamCreate for multi-agent coordination.
 - **OpenCode**: Background child context (`delegate`) is read-only only. No background tool execution.
 - **Codex CLI**: Full foreground/background for tools and child contexts. Only OpenAI models (no Claude Opus).
-- **Cursor, Trae, Trae-CN, Coco**: Foreground tool execution only. No native child context or background execution. Multi-agent workflows require manual orchestration or are not applicable.
+- Applications not listed (Cursor, Trae, Coco, etc.) have not been verified for multi-agent capabilities. Default assumption: foreground tool execution only.
 - Do not treat platform-specific names (`delegate`, `run_in_background`) as cross-platform concepts.
 
 ## Agent Type Platform Mapping
