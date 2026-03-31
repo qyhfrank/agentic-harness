@@ -19,10 +19,10 @@ Platform capabilities are documented in `references/application-matrix.md`. The 
 
 Two archetypes, selected by task nature:
 
-- **Thinker**: depth-first reasoning. Planning, review, root-cause analysis, architecture decisions.
+- **Thinker**: depth-first reasoning. Planning, review, root-cause analysis, architecture decisions. Strong at finding problems; fix suggestions tend to add complexity -- use findings, apply subtraction to fixes.
 - **Doer**: execution-first. Implementation, testing, mechanical refactoring.
 
-Default to Thinker for multi-step reasoning or quality judgment. Default to Doer for rapid code changes. See `references/application-matrix.md` for per-platform adapter mapping.
+Default to Thinker for multi-step reasoning or quality judgment. Default to Doer for rapid code changes. When consuming Thinker outputs, treat findings as hypotheses (parent verifies against source), and prefer the simplest fix over the agent's proposed fix. See `references/application-matrix.md` for per-platform adapter mapping.
 
 ## Workflow Selection
 
@@ -40,15 +40,6 @@ Before spawning a child context:
 - Result on critical path? Block on it.
 
 Once delegated, parent becomes coordinator only. Do not duplicate the delegated work locally.
-
-## Consuming Agent Outputs
-
-Thinker agents (deep reasoning, review, analysis) are strong at finding problems but their fix suggestions tend to add complexity. Use their findings, apply subtraction to their fixes.
-
-When consuming multi-agent outputs (orchestrate, critique, GSA):
-- Treat agent findings as hypotheses. Parent verifies against source before surfacing.
-- Consensus across agents strengthens a finding. Single-agent findings need more scrutiny.
-- Prefer the simplest fix that addresses the identified problem, not the agent's proposed fix.
 
 ## Skill Index
 
