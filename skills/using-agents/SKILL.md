@@ -41,6 +41,15 @@ Before spawning a child context:
 
 Once delegated, parent becomes coordinator only. Do not duplicate the delegated work locally.
 
+## Consuming Agent Outputs
+
+Thinker agents (deep reasoning, review, analysis) are strong at finding problems but their fix suggestions tend to add complexity. Use their findings, apply subtraction to their fixes.
+
+When consuming multi-agent outputs (orchestrate, critique, GSA):
+- Treat agent findings as hypotheses. Parent verifies against source before surfacing.
+- Consensus across agents strengthens a finding. Single-agent findings need more scrutiny.
+- Prefer the simplest fix that addresses the identified problem, not the agent's proposed fix.
+
 ## Skill Index
 
 ### Workflows
