@@ -15,7 +15,7 @@ Shared architecture note for child-context orchestration across rules, skills, a
 
 These are concept-layer terms. Reusable rules and prompt templates should speak in these terms first, then map to platform surfaces only where needed.
 
-For platform capability differences, read `platform-matrix.md`.
+For platform capability differences, read `application-matrix.md`.
 
 ## Ownership
 
@@ -48,7 +48,7 @@ Keep these layers distinct.
 
 ## Platform Mapping
 
-Platform surfaces differ. Keep shared skills and prompt templates platform-neutral, and use `platform-matrix.md` for concrete capability mapping.
+Platform surfaces differ. Keep shared skills and prompt templates platform-neutral, and use `application-matrix.md` for concrete capability mapping.
 
 ## Prompt Template Rule
 

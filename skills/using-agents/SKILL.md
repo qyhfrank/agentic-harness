@@ -22,7 +22,7 @@ Two archetypes, selected by task nature:
 
 Default to Thinker for tasks requiring multi-step reasoning or quality judgment. Default to Doer for tasks requiring rapid code changes.
 
-Platform-specific adapters and capability differences are documented in `references/platform-matrix.md`.
+Platform-specific adapters and capability differences are documented in `references/application-matrix.md`.
 
 ## Orchestration Primitives
 

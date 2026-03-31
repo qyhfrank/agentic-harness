@@ -44,7 +44,7 @@ Arguments: $ARGUMENTS
 
 - `orchestrate` 是并行 dispatch 和 aggregation 的 engine，不是平台 dispatch 语法手册。
 - 平台语法和 child-context 概念边界见 `../using-agents/references/architecture.md`。
-- 平台能力差异见 `../using-agents/references/platform-matrix.md`。
+- 平台能力差异见 `../using-agents/references/application-matrix.md`。
 - 默认应在拥有最终 synthesis 的最高层上下文调用。若当前上下文只是一个前台内容 worker，通常应该返回分析给 parent，而不是再嵌套调用 `/orchestrate`。
 
 ## Orchestration Heuristics
@@ -79,7 +79,7 @@ Arguments: $ARGUMENTS
 1. **解析参数**（见上表）
 
 2. **前置路由判断**
-   - 若任务是 deterministic waiter / scriptable monitor，先按 `../using-agents/references/platform-matrix.md` 选择 tool execution surface，而不是直接进入 child-context fan-out。
+   - 若任务是 deterministic waiter / scriptable monitor，先按 `../using-agents/references/application-matrix.md` 选择 tool execution surface，而不是直接进入 child-context fan-out。
    - 只有确认任务真的需要多个 child contexts 时，才继续下面的 orchestration 步骤。
 
 3. **推断模式**（用户未指定时）
