@@ -91,6 +91,9 @@ boundary:
   mutable: []
   immutable: []
 
+implementation:
+  protocol: tdd_required
+
 evaluation:
   objective: satisfy
   acceptance_criteria: []
@@ -139,6 +142,7 @@ Pre-fill what can be inferred:
 - `harness_root` from the resolved harness root path (always absolute)
 - `task.description` from the user's stated goal
 - `task.source` if the user referenced a plan or spec file
+- `implementation.protocol`: use `tdd_required` for features, bug fixes, refactors, and behavior changes; use `direct` for config/docs/generated-code style tasks when that is already obvious from the goal
 - `evaluation.objective`: use `optimize` if the goal is open-ended metric improvement; use `satisfy` if the goal has concrete completion criteria
 - `boundary.mutable` and `boundary.immutable` from repo analysis when the structure is unambiguous
 

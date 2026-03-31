@@ -111,6 +111,7 @@ Written once when the Completion flow resolves the task's worktree.
 Use optional nested fields instead of inventing new top-level columns:
 
 - `metric.value`, `metric.delta`, `metric.direction`, `metric.confidence`
+- `implementation.protocol`, `implementation.red`, `implementation.green`
 - `verification.guards`, `verification.findings`, `verification.provider`
 - `evaluation.objective_met`, `evaluation.frontier`, `evaluation.close_authority`
 - `artifacts`

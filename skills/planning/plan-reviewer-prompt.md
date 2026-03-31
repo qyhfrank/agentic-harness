@@ -29,7 +29,7 @@ Foreground child context:
 | File Size          | Would any new or modified file likely grow large enough to be hard to reason about as a whole?  | per-chunk  |
 | Task Syntax        | Checkbox syntax (`- [ ]`) on steps for tracking                                               | per-chunk  |
 | Task IDs           | Every task has a `**Task ID:**` and `**Depends on:**` field                                    | per-chunk  |
-| Execution Summary  | Plan has an Execution Summary section with mutable/immutable paths, verification, criteria     | chunk 1 only |
+| Execution Summary  | Plan has an Execution Summary section with mutable/immutable paths, implementation protocol, verification, criteria | chunk 1 only |
 | Chunk Size         | Each chunk under 1000 lines                                                                    | per-chunk  |
 
     ## CRITICAL
@@ -38,6 +38,7 @@ Foreground child context:
     - Any TODO markers or placeholder text
     - Steps that say "similar to X" without actual content
     - Incomplete task definitions
+    - Missing implementation protocol or task-level override where one is needed
     - Missing verification steps or expected outputs
     - Files planned to hold multiple responsibilities or likely to grow unwieldy
 

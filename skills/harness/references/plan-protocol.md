@@ -53,7 +53,23 @@ Approach:
 
 If the user is unsure, suggest starting narrow and note that boundaries can be widened later.
 
-### 4. Verification Strategy
+### 4. Implementation Protocol
+
+Help the user choose how implementation should handle tests:
+
+```yaml
+implementation:
+  protocol: tdd_required | tdd_preferred | direct
+```
+
+Guide:
+- `tdd_required`: default for features, bug fixes, refactors, and behavior changes
+- `tdd_preferred`: use when test-first flow is still valuable but a full red-first cycle may occasionally need a justified exception
+- `direct`: use for config-only, docs-only, generated code, or similar work where full red-first sequencing is not the right fit
+
+Explain explicitly: this field controls whether the proposer must produce RED evidence before writing production code.
+
+### 5. Verification Strategy
 
 Help the user choose verification gates:
 
@@ -80,7 +96,7 @@ If dry-run fails, the command is wrong or the repo has pre-existing failures. Re
 
 Keep the config linear. Prefer an ordered sequence of deterministic checks, optional review stages, and simple escalation conditions. Do not invent branching gate graphs or nested policy DSLs in config.
 
-### 5. Evaluation Strategy
+### 6. Evaluation Strategy
 
 Help the user define what counts as progress and completion:
 
@@ -107,7 +123,7 @@ Guide:
 
 Explain explicitly: verifier outputs are inputs; evaluator rules decide keep, no-op, discard, and completion.
 
-### 6. Stop Guards
+### 7. Stop Guards
 
 ```yaml
 termination:
@@ -120,7 +136,7 @@ Guide:
 - Budget: suggest 50 rounds default, adjust based on task scope; use `max_rounds: -1` only when the user explicitly wants an open-ended run
 - Stagnation: suggest 5 rounds default
 
-### 7. Entropy Configuration
+### 8. Entropy Configuration
 
 Review defaults, adjust only if user has specific needs:
 
@@ -132,7 +148,7 @@ entropy:
 
 Explain briefly: "If the same error appears 3 times, the agent will re-read all files and try a different approach. Want to adjust this?"
 
-### 8. Finalize
+### 9. Finalize
 
 Before removing `draft: true`:
 

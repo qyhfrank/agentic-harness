@@ -266,6 +266,7 @@ These are not mandatory for every round. Invoke when the trigger condition match
 6. **Context survives sessions.** Update context.md every round so a fresh agent can resume.
 7. **Config is the contract.** All runtime behavior derives from config.yaml. No implicit defaults.
 8. **Reviewer context is bounded.** Reviewers get the diff, relevant files, AGENTS.md, and config excerpts they need. They do not get proposer reasoning as authority.
+9. **Implementation protocol is binding.** Respect `implementation.protocol` from config; test-first tasks require RED evidence before production code.
 
 ## Reference Index
 

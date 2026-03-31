@@ -55,7 +55,19 @@ Before defining tasks, map out which files will be created or modified:
 
 ### Task Granularity
 
-Each step is one action (2-5 minutes). TDD cycle per task:
+Each step is one action (2-5 minutes).
+
+### Implementation Protocol
+
+Every plan must declare an execution protocol in `Execution Summary`:
+
+- `tdd_required` -- default for features, bug fixes, refactors, and behavior changes
+- `tdd_preferred` -- use test-first flow when practical, but allow a justified fallback
+- `direct` -- for config-only, docs-only, generated code, or similar work where full red-first sequencing is not the right fit
+
+When unsure, prefer `tdd_required`.
+
+For `tdd_required` tasks, the default per-task cycle is:
 
 1. Write the failing test
 2. Run it to verify it fails
@@ -80,6 +92,7 @@ Each step is one action (2-5 minutes). TDD cycle per task:
 
 **Mutable Paths:** `src/foo/**`, `tests/foo/**`
 **Immutable Paths:** `infra/**`
+**Implementation Protocol:** `tdd_required`
 **Mandatory Verification:** `pytest tests/foo -q`
 **Guard Checks:** `ruff check src tests`
 **Acceptance Criteria:**
@@ -88,9 +101,12 @@ Each step is one action (2-5 minutes). TDD cycle per task:
 
 ---
 
+Below is the default task skeleton for `tdd_required`. For `direct`, replace the RED/GREEN steps with the smallest correct implement -> verify -> commit sequence. For `tdd_preferred`, keep the TDD shape unless the task has a justified exception.
+
 ### Task N: [Component Name]
 **Task ID:** task-N
 **Depends on:** task-M (or "none")
+**Implementation Protocol Override:** `direct` (optional, omit when using plan default)
 
 **Files:**
 - Create: `exact/path/to/file.py`
@@ -118,6 +134,7 @@ Each step is one action (2-5 minutes). TDD cycle per task:
 ````
 
 Remember: exact file paths always, complete code (not "add validation"), exact commands with expected output.
+When a task involves mocks, test doubles, or test-only seams, read `references/testing-anti-patterns.md` and fold the relevant guidance into the implementer prompt.
 
 ### Plan Review Loop
 
@@ -168,12 +185,14 @@ Planning does not drive the task loop, run reviews, maintain its own ledger, or 
 - Implementer and review gates are all foreground child contexts.
 - Controller consumes results sequentially. Do not background these.
 - Spec and quality review go through `/critique --spec` and `/critique --quality`.
+- Planning passes the effective implementation protocol to the implementer and expects RED/GREEN evidence back when the protocol requires test-first execution.
 - Orchestration stays in controller. Child workers do not invoke `/fanout` or `/critique`.
 
 #### Embedded (in /harness)
 
 - Planning only dispatches the implementer child context.
 - Harness runs `/critique --spec` and `/critique --quality` as verification gates.
+- Planning still computes the effective implementation protocol and passes it to the implementer.
 - Planning does not invoke `/critique` directly — harness owns the verification step.
 
 ### Size Gate
@@ -245,9 +264,12 @@ tasks:
     subject: "<task title>"
     full_text: "<complete task description>"
     acceptance: "<what counts as done>"
+    implementation_protocol: tdd_required
     dependencies: []
     status: pending
 ```
+
+Planning uses this field when dispatching the implementer. If a task omits it, inherit the plan-level `Implementation Protocol`.
 
 ### Handling Implementer Status
 
@@ -318,6 +340,10 @@ Child context fails: launch new child context to fix. Do not fix manually (conte
 - `./implementer-prompt.md` -- implementer child context prompt
 - `./plan-reviewer-prompt.md` -- plan document reviewer prompt
 
+## References
+
+- `references/testing-anti-patterns.md` -- load when writing/changing tests, adding mocks, or considering test-only production seams
+
 ## Integration
 
 Required workflow skills:
@@ -325,4 +351,3 @@ Required workflow skills:
 
 Related skills:
 - `superpowers:brainstorming` -- design exploration before plan writing
-- `superpowers:test-driven-development` -- TDD within each task

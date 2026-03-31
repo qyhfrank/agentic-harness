@@ -19,6 +19,10 @@ Foreground child context:
 
     [Scene-setting: where this fits, dependencies, architectural context]
 
+    ## Execution Protocol
+
+    [Implementation protocol for this task: tdd_required | tdd_preferred | direct]
+
     ## Before You Begin
 
     If you have questions about:
@@ -33,7 +37,7 @@ Foreground child context:
 
     Once you're clear on requirements:
     1. Implement exactly what the task specifies
-    2. Write tests (following TDD if task says to)
+    2. Follow the execution protocol below
     3. Verify implementation works
     4. Commit your work
     5. Self-review (see below)
@@ -43,6 +47,28 @@ Foreground child context:
 
     **While you work:** If you encounter something unexpected or unclear, **ask questions**.
     It's always OK to pause and clarify. Don't guess or make assumptions.
+
+    ## Test-First Execution Protocol
+
+    If the protocol is `tdd_required`:
+    1. Write one minimal failing test or repro before writing production code.
+    2. Run it and confirm it fails for the expected reason.
+    3. Only then write the minimal code to make it pass.
+    4. Re-run the relevant tests and confirm green.
+    5. Refactor only after green, while keeping tests green.
+
+    If the protocol is `tdd_preferred`:
+    - Follow the same flow when practical.
+    - If you cannot start with a failing test or repro, stop and explain why before writing production code.
+
+    If the protocol is `direct`:
+    - Full red-first sequencing is not required.
+    - Still add or update tests when the task changes behavior or verification coverage.
+
+    Testing discipline:
+    - Test real behavior, not mock existence.
+    - Do not add test-only methods to production code.
+    - Do not mock dependencies until you understand which side effects the test relies on.
 
     ## Code Organization
 
@@ -95,7 +121,7 @@ Foreground child context:
 
     **Testing:**
     - Do tests actually verify behavior (not just mock behavior)?
-    - Did I follow TDD if required?
+    - Did I follow the declared implementation protocol?
     - Are tests comprehensive?
 
     If you find issues during self-review, fix them now before reporting.
@@ -104,6 +130,9 @@ Foreground child context:
 
     When done, report:
     - **Status:** DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
+    - **Implementation Protocol:** tdd_required | tdd_preferred | direct
+    - **RED Evidence:** command + expected failure (required for `tdd_required`; explain if unavailable for `tdd_preferred`; `n/a` for `direct`)
+    - **GREEN Evidence:** command + pass result (or equivalent verification)
     - What you implemented (or what you attempted, if blocked)
     - What you tested and test results
     - Files changed

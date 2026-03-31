@@ -21,6 +21,14 @@ Phase B core: the autonomous propose-verify-evaluate-record cycle.
 
 - Read context.md Next Steps for direction.
 - If the change is non-trivial (multi-file, architectural, or unclear path), invoke the `brainstorming` skill to explore alternatives before committing to an approach. Skip for simple, obvious changes.
+- Respect `implementation.protocol` from config:
+  - `tdd_required`: before writing production code, create one minimal failing test or repro, run it, and confirm it fails for the expected reason. Then write the minimal code to pass.
+  - `tdd_preferred`: follow the same flow when practical. If you cannot start with a failing test or repro, record why in the round summary before proceeding.
+  - `direct`: full red-first sequencing is not required, but behavior changes still need appropriate verification coverage.
+- When writing or changing tests:
+  - test real behavior, not mock existence
+  - do not add test-only methods to production code
+  - do not mock dependencies until you understand which side effects the test relies on
 - Make code changes within `boundary.mutable`. Never touch `boundary.immutable`.
 - Apply `atomicity_test`: if the change description needs `and`, split into separate rounds.
 - Apply `simplicity_rule` from config if set.
