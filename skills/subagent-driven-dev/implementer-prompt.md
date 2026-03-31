@@ -1,16 +1,19 @@
-# Implementer Subagent Prompt Template
+# Implementer Child Context Prompt Template
 
-Use this template when dispatching an implementer subagent.
+Use this template when launching an implementer child context.
+
+This file defines the prompt body and role contract only. Wrap it with the platform's foreground child-context surface. Do not hardcode platform-only tool syntax here.
 
 ```
-Task tool (general-purpose):
+Foreground child context:
+  role: leaf implementer
   description: "Implement Task N: [task name]"
   prompt: |
     You are implementing Task N: [task name]
 
     ## Task Description
 
-    [FULL TEXT of task from plan - paste it here, don't make subagent read file]
+    [FULL TEXT of task from plan - paste it here, don't make the child context read the file]
 
     ## Context
 
@@ -68,7 +71,7 @@ Task tool (general-purpose):
 
     **How to escalate:** Report back with status BLOCKED or NEEDS_CONTEXT. Describe
     specifically what you're stuck on, what you've tried, and what kind of help you need.
-    The controller can provide more context, re-dispatch with a more capable model,
+    The controller can provide more context, re-launch with a more capable model,
     or break the task into smaller pieces.
 
     ## Before Reporting Back: Self-Review

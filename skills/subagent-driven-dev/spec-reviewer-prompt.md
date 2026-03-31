@@ -1,11 +1,14 @@
 # Spec Compliance Reviewer Prompt Template
 
-Use this template when dispatching a spec compliance reviewer subagent.
+Use this template when launching a spec compliance reviewer child context.
 
 **Purpose:** Verify implementer built what was requested (nothing more, nothing less)
 
+This file defines the prompt body and role contract only. Wrap it with the platform's foreground child-context surface. Do not hardcode platform-only tool syntax here.
+
 ```
-Task tool (general-purpose):
+Foreground child context:
+  role: leaf spec reviewer
   description: "Review spec compliance for Task N"
   prompt: |
     You are reviewing whether an implementation matches its specification.

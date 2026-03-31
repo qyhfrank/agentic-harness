@@ -1,13 +1,16 @@
 # Code Quality Reviewer Prompt Template
 
-Use this template when dispatching a code quality reviewer subagent.
+Use this template when launching a code quality reviewer child context.
 
 **Purpose:** Verify implementation is well-built (clean, tested, maintainable)
 
 **Only dispatch after spec compliance review passes.**
 
+This file defines the prompt body and role contract only. Wrap it with the platform's foreground child-context surface. Do not hardcode platform-only tool syntax here.
+
 ```
-Task tool (subagent):
+Foreground child context:
+  role: leaf code quality reviewer
   Use template at ./code-reviewer.md
 
   WHAT_WAS_IMPLEMENTED: [from implementer's report]

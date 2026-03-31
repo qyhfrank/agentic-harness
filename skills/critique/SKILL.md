@@ -21,6 +21,13 @@ Arguments: $ARGUMENTS
 - 重构前（建立 baseline）
 - 修复复杂 bug 后
 
+## Invocation Boundary
+
+- `critique` 默认由拥有最终 review judgment 和源码复核责任的最高层上下文调用。
+- 若当前上下文只是 implementer、reviewer、researcher 之类的内容型 child worker，通常不应再次递归调用 `/critique`。
+- Per-task review（例如 `subagent-driven-dev` 的 spec/quality loop）继续使用各自的 leaf reviewer prompt；不要在这些 leaf worker 里升级成全局 critique。
+- 平台 dispatch 语法和 child-context 概念边界见 `../using-agents/references/orchestration-architecture.md`。
+
 Per-task review（在 subagent-driven-dev 内）不走 `/critique`，直接用 `./code-reviewer.md` 模板 dispatch 单个 reviewer。
 
 本 skill 是对 `/orchestrate` 的一层薄封装：
@@ -151,7 +158,7 @@ reviewer 发现必须遵守：
 
 执行顺序：
 
-1. 解析参数：当 `$ARGUMENTS` 中出现 `/codex-cli`、`/codex`、`codex`、或 `-a codex` 时，识别为 agent 类型指令，传递给 orchestrate 作为 `-a codex`。先通过 Skill tool 加载 `/codex-cli`，确保命令模板可用
+1. 解析参数：当 `$ARGUMENTS` 中出现 `/codex-exec`、`/codex`、`codex`、或 `-a codex` 时，识别为 agent 类型指令，传递给 orchestrate 作为 `-a codex`。先通过 Skill tool 加载 `/codex-exec`，确保命令模板可用
 2. 加载 `/orchestrate`
 3. 选择 Strategy R 或 Strategy H，并使用 `-m gsa` 及解析出的 `-a` 参数启动审阅 subagents
 4. 收集输出后做 GSA 聚合
