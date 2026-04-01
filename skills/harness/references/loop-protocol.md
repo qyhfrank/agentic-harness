@@ -41,7 +41,14 @@ Phase B core: the autonomous propose-verify-evaluate-record cycle.
 
 ### 3. Verify
 
-Execute gates per `verification-gate.md` composite execution order:
+Filter gates by frequency before execution (see `verification-gate.md` Verification Tiers > Gate Frequency):
+- `every_round`: always run (Tier 0 and Tier 1 gates).
+- `milestone`: run when `current_round % termination.milestone_interval == 0` (default interval 10), and always on the final round.
+- `final`: only run during the completion verification pass (step 4 reaches a `complete` candidate).
+
+When a gate is skipped due to frequency, note it in `artifacts/round-{N}/` but do not record a verdict for it.
+
+Execute eligible gates per `verification-gate.md` composite execution order:
 
 1. Run all mandatory `command` gates.
 2. On all pass, run `agent_review` gates (if configured). Use the `critique` skill as the review engine for discovery-heavy agent-review gates.

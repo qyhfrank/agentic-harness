@@ -23,6 +23,7 @@ Assess agent-friendliness across these dimensions:
 | Lint / format | Linter config, formatter config | Glob for `.eslintrc*`, `.prettierrc*`, `ruff.toml`, `.golangci*`, `rustfmt.toml` |
 | CI | CI config files | Glob for `.github/workflows/*`, `.gitlab-ci.yml`, `Jenkinsfile`, `.circleci/*` |
 | Structure | AGENTS.md / README, directory layout | Check root for guidance files, assess directory depth and naming |
+| Verification methods | Benchmark scripts, profiling tools, e2e suites, smoke tests | Glob for `bench*`, `benchmark*`, `perf*`, `profile*`, `e2e*`, `integration*`, `smoke*`; check `package.json`/`Makefile`/`pyproject.toml` scripts for `bench`, `perf`, `e2e` |
 
 For each dimension, classify as: `ready` (config exists and runnable), `partial` (config exists but incomplete), `missing` (not found).
 
@@ -125,7 +126,10 @@ preflight:
   scope_resolve: true
 
 verification:
-  mandatory: []
+  mandatory:
+    # Each gate: {type, name, command, frequency}
+    # frequency: every_round (default) | milestone | final
+    # See verification-gate.md Verification Tiers for classification guidance
   guard: []
   escalation: []
 
@@ -151,6 +155,15 @@ When test infrastructure is `missing` or `partial`:
 - Suggest `agent_review` via `/critique --spec` and `/critique --quality` as additional mandatory gates
 - Set `close_authority.type` to `confirmed_review` instead of `command_backed`
 - Note in `context.md` that oracle lifting should be a priority: convert review findings into command gates as the task progresses
+
+When verification methods are discovered during repo diagnosis, pre-classify them by tier (see `verification-gate.md` Verification Tiers):
+- Tier 0 (`every_round`): typecheck, lint, unit tests
+- Tier 1 (`every_round`): isolated benchmarks, profiling scripts, smoke metrics -- anything that verifies the specific change without running the full pipeline
+- Tier 2 (`milestone` or `final`): full e2e suites, integration tests
+
+When the task is optimization-focused (`evaluation.objective: optimize`) and no Tier 1 probe exists:
+- Note in `context.md` Working Memory that creating an isolated probe should be a plan-phase priority
+- Suggest concrete probe types based on the detected stack (e.g., a micro-benchmark script for the targeted function, a bundle-size snapshot, a cold-start timer)
 
 Leave everything else empty with `# fill during plan` comments when helpful.
 

@@ -39,6 +39,7 @@ Parallel agent dispatch. For review workflows, prefer `/critique`. For large-sca
 - Not applicable: correlated failures, or full system state required to judge
 - Broad research -> breadth (split); narrow hard problems -> focused depth (`-a thinker` or explicit `-a codex`)
 - Minimum effective fan-out, but no artificial low caps on independent tasks
+- Scale dispatch count to scope: few files or a narrow question -> 3-5 workers; dozens of files or broad surface -> scale up toward 10+. For `sample` mode, 3 perspectives is usually sufficient; 5+ only for high-stakes architectural decisions
 
 ## Prompt Crafting
 

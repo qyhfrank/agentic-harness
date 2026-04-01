@@ -10,6 +10,38 @@ Verification answers whether a candidate change may proceed to evaluation.
 | `agent_review` | LLM reviewer or review skill | No | Medium | Low-Medium |
 | `human_review` | Human | N/A | High | Highest |
 
+## Verification Tiers
+
+Gates serve different purposes at different points in the iteration cycle. Classify each gate by tier to determine how often it runs:
+
+| Tier | Question | Frequency | Examples |
+| --- | --- | --- | --- |
+| 0 | Did I break anything? | `every_round` | typecheck, lint, unit tests |
+| 1 | Did this specific change work? | `every_round` | isolated benchmark, profiling probe, smoke metric, targeted repro script |
+| 2 | Does the whole system work? | `milestone` or `final` | full e2e suite, integration tests, manual QA |
+
+Tier 0 and 1 form the **iteration loop** -- fast enough to run every round without slowing the propose-verify cycle. Tier 2 is the **validation gate** -- expensive, run at milestones or only at completion.
+
+**Tier 1 is the key insight.** Most workflows default to either unit tests (Tier 0) or full e2e (Tier 2), skipping the middle. A Tier 1 gate is a **task-specific isolated probe** that answers "did this optimization actually help?" without running the full pipeline. Examples:
+
+- A micro-benchmark that exercises the specific function being optimized (compare latency before/after)
+- A profiling script that checks whether the targeted hot path improved
+- A smoke metric check (bundle size, cold start time, memory peak) against a recorded baseline
+
+When `evaluation.objective: optimize`, a Tier 1 probe is strongly recommended. Without one, every iteration pays the full Tier 2 cost to learn whether the change had any effect.
+
+### Gate Frequency
+
+Each gate in `verification.mandatory` and `verification.guard` supports a `frequency` field:
+
+| Frequency | When it runs |
+| --- | --- |
+| `every_round` | Every round (default if omitted) |
+| `milestone` | Every N rounds (`termination.milestone_interval`, default 10), plus always on the final round |
+| `final` | Only during the completion verification pass |
+
+When a gate is skipped due to frequency, it is not recorded as pass or fail. The round artifacts note which gates were skipped and why.
+
 ## Verdict Schema
 
 Every gate produces exactly one verdict:
@@ -103,7 +135,8 @@ Record confidence in the round event under `metric.confidence`.
 
 ## Composite Gate Execution Order
 
-1. Run all `command` gates first (cheapest, deterministic).
-2. If all commands pass, run `agent_review` gates.
-3. If agent_review passes or escalates, queue `human_review` if configured.
-4. **Short-circuit:** first mandatory `fail` from a deterministic gate -> skip remaining mandatory gates and hand failure to the evaluator.
+1. Filter gates by frequency: skip any gate whose `frequency` does not match the current round (see Verification Tiers > Gate Frequency).
+2. Run all eligible `command` gates first (cheapest, deterministic).
+3. If all commands pass, run eligible `agent_review` gates.
+4. If agent_review passes or escalates, queue `human_review` if configured.
+5. **Short-circuit:** first mandatory `fail` from a deterministic gate -> skip remaining mandatory gates and hand failure to the evaluator.
