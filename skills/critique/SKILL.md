@@ -1,7 +1,7 @@
 ---
 name: critique
 description: Use when code changes need structured review with anchored findings, including spec compliance gates, code quality gates, plan/config review, or full multi-angle reviews. Triggers on /critique, "review this", "code review", "quality check", "spec compliance check", "review the plan", "review the config", "find blocking issues".
-argument-hint: <what to review> [--spec|--quality|--plan|--adversarial] [-a thinker|doer|codex|opus] [--refactor]
+argument-hint: <what to review> [--spec|--quality|--plan|--adversarial] [-a thinker|doer|codex|opus] [--refactor] [--model <name>] [--effort <level>]
 ---
 
 Arguments: $ARGUMENTS
@@ -34,6 +34,8 @@ Arguments:
 - No flag: profile=full, engine=fanout
 - `-a thinker|doer|codex|opus`: worker override for fanout engine. No flag → `/fanout` infers.
 - `--refactor`: append optional refactor proposals (full profile only)
+- `--model <name>`: model override for codex/thinker workers in fanout engine. Pass-through to `/fanout`.
+- `--effort <level>`: reasoning effort for codex/thinker workers in fanout engine. Pass-through to `/fanout`.
 
 ## Verdict Envelope
 
@@ -132,6 +134,8 @@ Finding format (all profiles):
 **Anchor:** path:line
 **Minimal Fix:** shortest safe change
 ```
+
+Profile-specific extensions: the adversarial profile adds a `**Confidence:** 0.0-1.0` field after Trigger (see `references/adversarial-review-profile.md`).
 
 Full-profile main agent verification:
 
