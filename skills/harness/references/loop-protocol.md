@@ -20,6 +20,7 @@ Phase B core: the autonomous propose-verify-evaluate-record cycle.
 ### 1. Propose
 
 - Read context.md Next Steps for direction.
+- Check discovery.md Active Index and `read_first` entries before proposing. Specifically: verify the proposal does not revisit a known dead end, violate a known constraint, or ignore a known tool/environment quirk.
 - If the change is non-trivial (multi-file, architectural, or unclear path), invoke the `brainstorming` skill to explore alternatives before committing to an approach. Skip for simple, obvious changes.
 - Respect `implementation.protocol` from config:
   - `tdd_required`: before writing production code, create one minimal failing test or repro, run it, and confirm it fails for the expected reason. Then write the minimal code to pass.
@@ -74,13 +75,21 @@ After revert (`discard` or `crash`): verify the revert itself does not break bas
 
 ### 5. Record
 
-Append one event to `state.jsonl` per `state-ledger.md`.
+Append one event to `state.jsonl` per `state-ledger.md`. Include v2 fields:
+- `ts`: current UTC time.
+- `session_id`: from the session initialized in preflight.
+- `round_started_at`: the UTC time when step 1 (Propose) began for this round. Track this in memory at the start of each round.
 
 Update context.md per `context-protocol.md` update discipline:
-- Overwrite Current State
+- Overwrite Current State (including timing anchors: `session_id`, `last_round_started`)
 - Curate Working Memory
 - Rewrite Next Steps
 - Append to Decisions if a new decision was made
+
+Update discovery.md per `discovery-protocol.md` write discipline:
+- If this round produced durable knowledge (dead end, tool quirk, constraint, codebase insight, verification pattern), add or update entries. Apply the admission gate: durability, re-exploration cost, specificity.
+- If a Working Memory item was promoted to discovery.md, replace it with an ID reference in Working Memory.
+- Run per-round light hygiene: update Snapshot, update Active Index, resolve any new conflicts.
 
 ### 6. Entropy Check
 
@@ -103,7 +112,7 @@ Before executing any doom_loop_action, invoke the `systematic-debugging` skill t
 
 | `doom_loop_action` | Behavior |
 |---|---|
-| `reread_and_pivot` | Re-read all files in `boundary.mutable`. Discard current approach. Invoke `brainstorming` skill to generate alternative strategies, then pick one. Note the pivot and reasoning in context.md Decisions. |
+| `reread_and_pivot` | Re-read all files in `boundary.mutable`. Discard current approach. Invoke `brainstorming` skill to generate alternative strategies, then pick one. Note the pivot and reasoning in context.md Decisions. Record the failed approach as a Dead End in discovery.md with `why_failed` and `revisit_when`. |
 | `widen_boundary` | Suggest expanding `boundary.mutable`. Requires user approval. Pause loop until approved. |
 | `ask_human` | Pause loop. Present the repeated failure pattern and ask for guidance. |
 
@@ -112,6 +121,12 @@ Error signature matching: normalize guard output by stripping line numbers and t
 #### Continue
 
 If no stop condition fires, return to step 1 (Propose) for the next round.
+
+#### Discovery Hygiene
+
+After stop/continue evaluation, check whether full hygiene is due per `discovery-protocol.md`:
+
+- **Every 5 rounds, session end, or session resume**: run full hygiene — check all `revisit_when` conditions, resolve `needs_recheck` entries, archive stale entries, enforce caps.
 
 ## Volatile Metric Handling
 
@@ -137,10 +152,12 @@ Each active task works on branch `<task_slug>` inside a worktree (see Worktree I
 When ending a session mid-loop:
 
 1. Complete the current round (do not leave a half-committed state).
-2. Update context.md with full current state.
-3. If mid-verify, record as `crash` and revert.
-4. Write a structured feedback note per `feedback-protocol.md`.
-5. Auto-detect: check `state.jsonl` for repeated failure signatures. Append `repeat_loop` events.
-6. Report: current round, best result, and how to resume (`/harness run`).
+2. Append a `session_ended` event to `state.jsonl` with `reason` (`paused`, `handoff`, `budget_exhausted`, `stagnation`), current `round`, and `ts`.
+3. Update context.md with full current state including timing anchors.
+4. Run full discovery hygiene per `discovery-protocol.md` (session end trigger).
+5. If mid-verify, record as `crash` and revert. Do not write `session_ended` (crash means it was not clean).
+6. Write a structured feedback note per `feedback-protocol.md`.
+7. Auto-detect: check `state.jsonl` for repeated failure signatures. Append `repeat_loop` events.
+8. Report: current round, best result, and how to resume (`/harness run`).
 
 When the loop terminates (not mid-session), hand off to the Completion flow in `SKILL.md` for merge/keep/discard.

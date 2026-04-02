@@ -63,6 +63,7 @@ All paths below are at the resolved harness root.
         └── <task_id>/
             ├── config.yaml      # draft config
             ├── context.md       # initial context
+            ├── discovery.md     # empty; populated during run phase
             ├── state.jsonl      # empty; baseline event added during preflight
             └── artifacts/       # empty, for future round outputs
 ```
@@ -203,6 +204,39 @@ Leave everything else empty with `# fill during plan` comments when helpful.
 
 Create an empty file. Do not write a header row. The baseline event is created during preflight (run phase).
 
+### 7a. Generate discovery.md
+
+Create with the empty template:
+
+```markdown
+# Task Discoveries
+
+## Snapshot
+- active: 0 | needs_recheck: 0 | contested: 0
+- last_hygiene: -
+- read_first: (none)
+
+## Active Index
+(empty)
+
+## Environment Facts
+
+## Codebase Map
+
+## Dead Ends
+
+## Tool & API Behavior
+
+## Verification Insights
+
+## Constraints
+
+## Archived
+(empty)
+```
+
+This file is populated during the run phase per `discovery-protocol.md`. Do not pre-fill entries during scaffold.
+
 ### 8. Update AGENTS.md
 
 Append a harness section to the project's AGENTS.md (create if missing):
@@ -218,6 +252,7 @@ Harness state lives at the **harness root** (original repo root), not inside wor
 - Task configs: `<harness_root>/.harness/tasks/<task_id>/config.yaml`
 - Task state: `<harness_root>/.harness/tasks/<task_id>/state.jsonl`
 - Task context: `<harness_root>/.harness/tasks/<task_id>/context.md`
+- Task discoveries: `<harness_root>/.harness/tasks/<task_id>/discovery.md`
 - Task artifacts: `<harness_root>/.harness/tasks/<task_id>/artifacts/`
 
 Run `/harness plan` to configure, `/harness run` to execute.
@@ -240,6 +275,7 @@ Created:
   <harness_root>/.harness/current-task
   <harness_root>/.harness/tasks/fix-auth-timeout-bug/config.yaml (draft)
   <harness_root>/.harness/tasks/fix-auth-timeout-bug/context.md
+  <harness_root>/.harness/tasks/fix-auth-timeout-bug/discovery.md
   <harness_root>/.harness/tasks/fix-auth-timeout-bug/state.jsonl
   <harness_root>/.harness/tasks/fix-auth-timeout-bug/artifacts/
 

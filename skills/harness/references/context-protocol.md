@@ -15,6 +15,12 @@ Maintenance rules for `.harness/tasks/<task_id>/context.md` and cross-session re
 - current_objective: "reduce inference latency below 200ms"
 - best_result: "76.5 latency score (round 9, commit abc1234)"
 - last_action: "round 11 attempted X, verifier failed (lint regression), reverted"
+- active_discoveries: 6 active / 0 needs_recheck
+- session_id: harness-run-20260402-a1b2
+- session_started: 2026-04-02T09:00:00Z
+- task_started: 2026-04-02T08:30:00Z
+- last_round_started: 2026-04-02T09:45:00Z
+- timing_coverage: full since round 3 (rounds 0-2 predate v2)
 
 ## Working Memory
 - Observations about the codebase relevant to the task
@@ -33,21 +39,22 @@ Maintenance rules for `.harness/tasks/<task_id>/context.md` and cross-session re
 
 | Section | Contains | Update frequency |
 |---|---|---|
-| Current State | Phase, round counter, best result, last action, harness root, worktree info | Every round (overwrite) |
-| Working Memory | Codebase observations, patterns, dead ends | Every round (curate) |
+| Current State | Phase, round counter, best result, last action, harness root, worktree info, session and timing anchors, discovery summary | Every round (overwrite) |
+| Working Memory | Current-round operative observations, discovery ID references | Every round (curate) |
 | Decisions | Committed choices with rationale | When a decision is made (append) |
 | Next Steps | Immediate priorities for upcoming rounds | Every round (full rewrite) |
 
 ## Update Discipline
 
 ### Current State
-Overwrite all fields every round. Fields must reflect the state after the round completes, not before.
+Overwrite all fields every round. Fields must reflect the state after the round completes, not before. When `discovery.md` has active entries, include `active_discoveries` (see `discovery-protocol.md`).
 
 ### Working Memory
 - Add new observations discovered during the round.
 - Remove or compress entries that are no longer relevant.
 - Move settled observations to Decisions when they become committed choices.
-- Target: 5-15 bullet points. If it exceeds 15, prune aggressively.
+- Promote durable cross-round knowledge to `discovery.md` per `discovery-protocol.md`. Replace promoted items with an ID reference (e.g., `→ See env-003`).
+- Target: 5-15 bullet points. If it exceeds 15, prune aggressively. Discovery ID references count as items but are shorter, freeing space for fresh observations.
 
 ### Decisions
 - Append only. Do not edit or remove past decisions.
@@ -79,8 +86,12 @@ Do not store artifacts inline in context.md. Reference by path.
 | What patterns have we noticed? | `context.md` Working Memory |
 | What should we do next? | `context.md` Next Steps |
 | What was the exact output? | `artifacts/round-{N}/` |
+| When did round N happen? | `state.jsonl` (`ts`, `round_started_at`) |
+| How long did a session/task take? | `state.jsonl` (derived from `session_started`/`session_ended`/`task_disposed` timestamps) |
+| What is the current session and timing coverage? | `context.md` Current State (timing anchors for quick recovery orientation) |
+| What constraints, dead ends, quirks, and patterns persist across rounds? | `discovery.md` |
 
-`state.jsonl` records facts. `context.md` records meaning. Never duplicate structured event payloads from `state.jsonl` into context.md; summarize them.
+`state.jsonl` records facts. `context.md` records meaning. `discovery.md` records reusable knowledge. Never duplicate across them; reference by ID or round number.
 
 ## Recovery Protocol
 
@@ -92,6 +103,10 @@ On session start (fresh agent, no prior context in conversation), execute this s
 2. Verify worktree state                 -> confirm session is in the task's worktree; re-enter if needed. Confirm harness root is accessible.
 3. Read task config.yaml                 -> task definition, boundaries, verification, evaluation, stop guards
 4. Read task context.md                  -> phase, progress, learnings, blockers
+4a. If discovery.md exists:
+    -> Read Snapshot and Active Index
+    -> Expand entries listed in read_first or referenced by current objective/blocker
+    -> Do NOT read full file or Archived section unless specifically needed
 5. Read task state.jsonl                 -> tail recent events, full scan if needed
 6. Read AGENTS.md                        -> protocol constraints, repo conventions
 ```
@@ -145,7 +160,14 @@ A fresh agent reading only `AGENTS.md` + task-scoped `.harness/` state must accu
 5. Worktree state (correct branch and path)
 6. What to do next
 
-If it cannot, context.md is stale or incomplete. Fix before running the next round.
+When `discovery.md` exists, also answer:
+
+7. What hard constraints limit proposals?
+8. What approaches are known dead ends?
+9. What tool/verification quirks affect execution?
+10. What is the key module structure for this task?
+
+If questions 1-6 cannot be answered, context.md is stale or incomplete. If questions 7-10 cannot be answered but discovery.md has active entries, the Snapshot or read_first is wrong. Fix before running the next round.
 
 ## Failure Modes
 

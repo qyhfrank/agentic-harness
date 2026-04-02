@@ -2,6 +2,17 @@
 
 Run all checks below before entering the harness loop. On any mandatory failure, do NOT enter the loop.
 
+## Session Initialization
+
+Before running checks, emit a `session_started` event to `state.jsonl`:
+
+- Generate a `session_id` in format `harness-run-YYYYMMDD-XXXX` (4-char random hex).
+- If this is a fresh run, set `reason: initial`.
+- If resuming (previous events exist in `state.jsonl`), check whether the last session ended cleanly (has a `session_ended` event). Set `reason` to `resume_after_pause` or `resume_after_recovery` accordingly. Include `prev_session_id` and `resume_round`.
+- Record `ts` as the current UTC time.
+
+Store the `session_id` and `session_started_at` in memory for use in all subsequent events this session.
+
 ## Mandatory Checks
 
 | # | Check | Rule |
@@ -35,8 +46,9 @@ After all mandatory checks pass:
 
 1. Run all mandatory verification gates against current HEAD (in the code worktree CWD).
 2. Evaluate the baseline objective state and metric, if any.
-3. Append a `baseline_recorded` event to `<harness_root>/.harness/tasks/<task_id>/state.jsonl`.
+3. Append a `baseline_recorded` event to `<harness_root>/.harness/tasks/<task_id>/state.jsonl`. Include `ts`, `session_id`, and all v2 common envelope fields.
 4. If baseline verification fails, the task config is broken. Return to plan mode immediately.
+5. Update context.md Current State with timing anchors (`session_id`, `session_started`, `task_started`).
 
 ## Preflight Output Format
 

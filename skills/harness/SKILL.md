@@ -22,6 +22,7 @@ Harness always uses task-scoped state:
     <task_id>/
       config.yaml
       context.md
+      discovery.md
       state.jsonl
       artifacts/
 ```
@@ -160,7 +161,7 @@ Read `references/scaffold-protocol.md` and follow it.
 
 Also read `references/feedback-protocol.md` for the feedback note step at scaffold completion.
 
-Produces: `<harness_root>/.harness/current-task`, `<harness_root>/.harness/tasks/<task_id>/config.yaml`, `<harness_root>/.harness/tasks/<task_id>/context.md`, `<harness_root>/.harness/tasks/<task_id>/state.jsonl`, `<harness_root>/.harness/tasks/<task_id>/artifacts/`, and an `AGENTS.md` update.
+Produces: `<harness_root>/.harness/current-task`, `<harness_root>/.harness/tasks/<task_id>/config.yaml`, `<harness_root>/.harness/tasks/<task_id>/context.md`, `<harness_root>/.harness/tasks/<task_id>/discovery.md`, `<harness_root>/.harness/tasks/<task_id>/state.jsonl`, `<harness_root>/.harness/tasks/<task_id>/artifacts/`, and an `AGENTS.md` update.
 
 Idempotent: re-running scaffold only fills gaps, never overwrites existing files.
 
@@ -188,6 +189,7 @@ Read these references before proceeding:
 - `references/evaluation-protocol.md` -- evaluation decisions and close authority
 - `references/state-ledger.md` -- state recording
 - `references/context-protocol.md` -- context.md update and session recovery
+- `references/discovery-protocol.md` -- durable knowledge layer: admission, curation, recovery
 - `references/feedback-protocol.md` -- feedback notes at round/session boundaries
 
 ### Recovery (resume)
@@ -282,4 +284,5 @@ These are not mandatory for every round. Invoke when the trigger condition match
 | `evaluation-protocol.md` | Evaluator role, metric interpretation, close authority | plan, run |
 | `state-ledger.md` | JSONL event schema and reading conventions | plan, run |
 | `context-protocol.md` | context.md updates, session recovery | run |
+| `discovery-protocol.md` | Durable knowledge layer: admission, curation, recovery | run |
 | `feedback-protocol.md` | Skill-level feedback notes and event schema | scaffold, plan, run |
