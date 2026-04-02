@@ -61,11 +61,13 @@ Evaluate in order before spawning any child context. Stop at first match:
 1. Fits in parent context, or cold-start cost > benefit? -> **local, do not spawn**
 2. Subagent would need to reconstruct significant parent context? -> **local, do not spawn**
 3. Deterministic wait with scriptable condition? -> **tool execution** (background if parent has work, foreground otherwise). Only escalate to a child context when the condition needs ongoing reasoning or synthesis.
-4. Blocks the next decision or step? -> **foreground child context**
-5. Multiple agents need coordination and shared state? -> **team orchestration** (Claude Code only)
+4. Single child's result is the current critical path? -> **foreground child context**
+5. Work decomposition will evolve during execution -- subtasks emerge from intermediate findings, workers' outputs reshape sibling scope, or convergence requires multiple dispatch-assess-redispatch waves? -> **team orchestration** (Claude Code only). If the full partition is known upfront and workers are independent, prefer `/fanout`.
 6. No ordering dependency or shared-write conflict? -> **same-wave parallel launch** (use `/fanout` for independent parallel work with no inter-agent communication)
 7. Read-only/advisory, parent has independent work? -> **background child context**
 8. None of the above? -> **local** (default)
+
+Quick test for steps 4-6: Can I write all child prompts before any child starts? Yes -> `/fanout` (step 6). Am I mainly waiting on one result to decide the next move? Yes -> foreground child (step 4). Do I expect at least one round of "mid-flight discovery -> revise task list -> reassign" while multiple agents stay active? Yes -> team (step 5).
 
 Depth > 1 only when a child itself needs to fan out (e.g., `/planning` task needs `/critique` internally). Most tasks work fine with depth 1 + leaf workers. Once delegated, parent becomes coordinator only -- do not duplicate the delegated work locally.
 
