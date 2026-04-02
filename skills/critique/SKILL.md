@@ -1,7 +1,7 @@
 ---
 name: critique
 description: Use when code changes need structured review with anchored findings, including spec compliance gates, code quality gates, plan/config review, or full multi-angle reviews. Triggers on /critique, "review this", "code review", "quality check", "spec compliance check", "review the plan", "review the config", "find blocking issues".
-argument-hint: <what to review> [--spec|--quality|--plan] [-a thinker|doer|codex|opus] [--refactor]
+argument-hint: <what to review> [--spec|--quality|--plan|--adversarial] [-a thinker|doer|codex|opus] [--refactor]
 ---
 
 Arguments: $ARGUMENTS
@@ -17,6 +17,7 @@ Select profile + engine → structured findings with source anchors.
 | `spec` | Does implementation match requirements? | `single` |
 | `quality` | Clean, tested, maintainable? | `single` |
 | `plan` | Complete, coherent, ready to execute? | `single` |
+| `adversarial` | Can this fail in subtle, expensive ways? | `single` |
 | `full` | Multi-angle review with role diversity / cross-validation | `fanout` |
 
 | Engine | How |
@@ -29,6 +30,7 @@ Arguments:
 - `--spec`: profile=spec, engine=single
 - `--quality`: profile=quality, engine=single
 - `--plan`: profile=plan, engine=single
+- `--adversarial`: profile=adversarial, engine=single
 - No flag: profile=full, engine=fanout
 - `-a thinker|doer|codex|opus`: worker override for fanout engine. No flag → `/fanout` infers.
 - `--refactor`: append optional refactor proposals (full profile only)
@@ -68,6 +70,12 @@ Input: BASE_SHA, HEAD_SHA, implementation description, plan/requirements referen
 Template: `references/plan-review-profile.md`
 
 Input: planning artifact (plan doc, harness config.yaml, task strategy) + goal/spec reference. Use after plan mode, harness scaffold/plan, or any planning artifact is ready. Checks completeness, goal alignment, boundary coverage, verification readiness.
+
+## Profile: adversarial
+
+Template: `references/adversarial-review-profile.md`
+
+Input: code change context (diff, target label, optional focus area). Challenges the implementation approach and design choices rather than checking spec compliance. Prioritizes failures that are expensive, dangerous, or hard to detect: auth/trust boundaries, data loss, race conditions, rollback safety, stale state, schema drift. Uses a skeptical stance with confidence-annotated findings.
 
 ## Profile: full
 
@@ -170,7 +178,7 @@ These findings must also: state concrete facts (no vague "over-engineering" labe
 
 ## Execution
 
-### Single Engine (--spec, --quality, --plan)
+### Single Engine (--spec, --quality, --plan, --adversarial)
 
 1. Parse arguments, determine profile.
 2. Spawn single reviewer child context with profile's prompt template.
@@ -194,4 +202,5 @@ These findings must also: state concrete facts (no vague "over-engineering" labe
 | `references/spec-review-profile.md` | Spec compliance reviewer prompt | spec profile |
 | `references/quality-review-profile.md` | Code quality reviewer prompt wrapper | quality profile |
 | `references/plan-review-profile.md` | Plan/config reviewer prompt | plan profile |
+| `references/adversarial-review-profile.md` | Adversarial challenge reviewer prompt | adversarial profile |
 | `references/code-reviewer.md` | Base code review agent prompt + policy | quality, full profiles |
