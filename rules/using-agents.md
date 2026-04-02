@@ -18,9 +18,11 @@ Per-platform mapping:
 
 Platform-specific notes:
 
-- **Claude Code**: Thinker delegates to Codex via `/codex-exec`. Doer uses the native editable child-context surfaces.
+- **Claude Code**: Thinker delegates to Codex via `/codex-exec`. Model and effort are configurable (`--model`, `--effort`); defaults are `gpt-5.4` + `xhigh`. Doer uses the native editable child-context surfaces.
 - **OpenCode**: Thinker uses `@agent-gpt-5.4-xhigh`. Doer uses `@agent-opus`.
 - **Codex CLI**: Only OpenAI models are available. Thinker maps to `gpt-5.4 xhigh`. Doer should prefer a faster or lower-effort native coding worker when configurable, such as `gpt-5.1-codex-mini` or `gpt-5.4` at lower effort.
+
+When delegating to Thinker: structure the prompt with XML blocks (`<task>`, `<structured_output_contract>`, `<verification_loop>`, etc.) from `/codex-exec` `references/prompt-blocks.md`. Prefer tighter prompt contracts over raising reasoning effort.
 
 ## Execution Surfaces
 

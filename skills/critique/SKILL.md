@@ -188,9 +188,9 @@ These findings must also: state concrete facts (no vague "over-engineering" labe
 
 ### Fanout Engine (full, default)
 
-1. Parse arguments. Pass `-a` to `/fanout` if present. If `codex` worker requested, load `/codex-exec` via Skill tool first.
+1. Parse arguments. Pass `-a` to `/fanout` if present. If `codex` worker requested, load `/codex-exec` via Skill tool first. Pass `--model` and `--effort` to `/fanout` if specified.
 2. Load `/fanout`.
-3. Select Strategy R or H; dispatch reviewers with `-m sample` and parsed `-a` argument.
+3. Select Strategy R or H; dispatch reviewers with `-m sample` and parsed `-a` argument. When dispatching codex workers, `/fanout` auto-wraps reviewer prompts with XML blocks (`<task>`, `<grounding_rules>`, `<structured_output_contract>`) for better GPT-5.4 compatibility.
 4. Collect outputs, run sample aggregation.
 5. Main agent source-verifies all blocking findings; output `Main Verification` blocks.
 6. Return verdict envelope.

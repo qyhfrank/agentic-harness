@@ -253,7 +253,8 @@ Harness operates within the ASB ecosystem. At specific points, prefer invoking a
 | Scaffold/plan phase complete: config.yaml finalized | `/critique --plan` | Review config completeness, boundary coverage, verification readiness before entering run |
 | Doom loop: same error repeats N times | `systematic-debugging` | Before attempting pivot -- diagnose root cause first |
 | Doom loop: pivot needed after diagnosis | `brainstorming` | Generate alternative strategies instead of guessing |
-| `agent_review` or discovery review verification gate | `/critique` | Review stage with profile selection: spec, quality, or full multi-angle review |
+| Doom loop: `codex_rescue` action configured | `/codex-exec` | Delegate diagnosis to Codex with structured Diagnosis recipe. Fall back to `ask_human` if Codex cannot diagnose. |
+| `agent_review` or discovery review verification gate | `/critique` | Review stage with profile selection: spec, quality, adversarial, or full multi-angle review |
 | Run phase: complex multi-file change in Propose step | `brainstorming` | When the change is non-trivial and benefits from exploring alternatives |
 | Run phase: proposal is a multi-task plan with independent tasks | `/planning` | Embedded mode: planning parses plan + dispatches implementer; harness drives rounds and runs `/critique` verification gates. |
 

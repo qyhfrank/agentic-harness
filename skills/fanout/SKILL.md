@@ -2,7 +2,7 @@
 name: fanout
 description: Use when multiple perspectives on the same question improve quality, or when lightweight parallel dispatch to independent subtasks is needed. Triggers on /fanout, "fan out", "parallel agents", "split across agents", "get multiple opinions", "sample N agents".
 user_invocable: true
-argument-hint: <task> [-m split|sample] [-a <type>[:<count>]]... [-b]
+argument-hint: <task> [-m split|sample] [-a <type>[:<count>]]... [-b] [--model <name>] [--effort <level>]
 ---
 
 Arguments: $ARGUMENTS
@@ -18,11 +18,14 @@ Parallel agent dispatch. For review workflows, prefer `/critique`. For large-sca
 | `-m` | auto-infer | `split` (data-parallel, no aggregation) / `sample` (multi-sample, synthesize) |
 | `-a` | 5 x `auto` | Number = count of inferred worker type; `type` = that type x5; `type:N` = specific. Supported types: `auto`, `thinker`, `doer`, `codex`, `opus` |
 | `-b` | off | Background child context |
+| `--model` | (codex-exec default) | Model override for codex/thinker workers. Pass-through to `/codex-exec`. |
+| `--effort` | (codex-exec default) | Reasoning effort for codex/thinker workers. Pass-through to `/codex-exec`. |
 
 ```
 /fanout analyze the root cause of this bug
 /fanout fix these 5 test files -m split
 /fanout analyze this bug -a codex:3 -a opus:2
+/fanout analyze this bug -a codex --model spark --effort medium
 /fanout analyze this bug -b
 ```
 
@@ -58,6 +61,16 @@ Agent Context Card:
 
 Fill-in: role = `leaf` (default); depth = parent + 1; max = inherited (may tighten, never expand); budget = 0 for leaf.
 
+### Codex/Thinker prompt structuring
+
+When worker type is `codex` or resolves to `codex` via Thinker mapping, auto-wrap the subtask prompt with XML blocks from `/codex-exec` `references/prompt-blocks.md`:
+
+- **split mode**: wrap each subtask with `<task>` + `<compact_output_contract>`. For write-capable tasks, add `<action_safety>`.
+- **sample mode**: wrap the shared task with `<task>` + `<grounding_rules>` + `<structured_output_contract>`. For review tasks, add `<dig_deeper_nudge>`.
+- **All modes**: add `<verification_loop>` for correctness-critical tasks. Add `<missing_context_gating>` when the worker might need to retrieve context.
+
+Do not double-wrap: if the caller already provided XML-tagged input, pass it through unchanged.
+
 ## Execution
 
 1. **Parse arguments + infer mode**
@@ -76,7 +89,7 @@ Fill-in: role = `leaf` (default); depth = parent + 1; max = inherited (may tight
 4. **Launch agents**: issue all parallel calls in a single response
    - Default foreground (wait for all results); `-b` enables background (only when parent has independent work)
    - `auto`, `thinker`, `doer`: route through the current platform's archetype mapping
-   - `-a codex`: load `/codex-exec`, invoke `codex exec` via Bash
+   - `-a codex`: load `/codex-exec`, apply prompt structuring (see above), invoke `codex exec` via Bash. Pass `--model` and `--effort` if specified.
    - `-a opus`: use the platform's Opus-class worker only when that runner exists
    - Mixed (`-a thinker:3 -a doer:2`, `-a codex:3 -a opus:2`): route by type, unify results
 
