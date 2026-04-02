@@ -113,7 +113,7 @@ Before executing any doom_loop_action, invoke the `systematic-debugging` skill t
 | `doom_loop_action` | Behavior |
 |---|---|
 | `reread_and_pivot` | Re-read all files in `boundary.mutable`. Discard current approach. Invoke `brainstorming` skill to generate alternative strategies, then pick one. Note the pivot and reasoning in context.md Decisions. Record the failed approach as a Dead End in discovery.md with `why_failed` and `revisit_when`. |
-| `codex_rescue` | Delegate diagnosis to Codex via `/codex-exec`. Construct a structured prompt using the Diagnosis recipe from `/codex-exec` `references/prompt-recipes.md`, including: failed approaches, error signatures, boundary context. Use `--sandbox read-only`. If Codex identifies a viable fix path, record it in context.md Next Steps and continue the loop. If Codex cannot diagnose, fall back to `ask_human`. |
+| `codex_rescue` | Delegate diagnosis to Codex via `/codex-exec`. Construct a structured prompt using the Diagnosis recipe from `/codex-exec` `references/prompt-recipes.md`, including: failed approaches, error signatures, boundary context. Use `--sandbox workspace-write` so Codex can reproduce the failing command. Codex diagnoses only; the harness applies fixes in the next Propose step. If Codex identifies a viable fix path, record it in context.md Next Steps and continue the loop. If Codex cannot diagnose, fall back to `ask_human`. |
 | `widen_boundary` | Suggest expanding `boundary.mutable`. Requires user approval. Pause loop until approved. |
 | `ask_human` | Pause loop. Present the repeated failure pattern and ask for guidance. |
 
