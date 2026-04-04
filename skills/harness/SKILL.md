@@ -17,7 +17,7 @@ Harness always uses task-scoped state:
 
 ```
 .harness/
-  current-task
+  current-task          # optional root-scoped default (not the active-task pointer)
   tasks/
     <task_id>/
       config.yaml
@@ -25,7 +25,14 @@ Harness always uses task-scoped state:
       discovery.md
       state.jsonl
       artifacts/
+
+<worktree_root>/
+  .harness-task         # worktree-local task affinity (single line: <task_id>)
 ```
+
+`.harness-task` lives in the code worktree root, not inside `.harness/`. It is the authoritative local binding between a worktree and its task.
+
+`.harness/current-task` is a root-scoped default hint, not a global active-task pointer. It answers "which task to use when no stronger local signal exists" — it does not answer "which task is this repo currently working on".
 
 Single-task usage is just the case where only one task exists. It is not a second storage layout.
 
@@ -56,21 +63,26 @@ All `.harness/` reads and writes use the resolved harness root path. All code op
 
 ## Task Resolution
 
-Resolve the current task in this order:
+Resolve the current task using a local-first fallback chain:
 
 1. Explicit task identifier supplied by the user or command wrapper
-2. Current git branch name matching a unique task slug from an existing `<task_id>`
-3. `<harness_root>/.harness/current-task`
+2. `<worktree_root>/.harness-task` file (worktree-local affinity)
+3. Current git branch name matching a unique task slug from an existing `<task_id>`
 4. Sole task under `<harness_root>/.harness/tasks/`
+5. `<harness_root>/.harness/current-task` (root-scoped default, last resort)
 
-If no task can be resolved, scaffold derives a task slug and task ID from the user's goal (see Task ID Generation) and sets `<harness_root>/.harness/current-task` to the task ID.
+If inside a task-affined worktree (`.harness-task` exists or branch matches a task), never fall through to step 5. A failed local resolution in a worktree is a repair condition, not a reason to read the global default.
+
+If `.harness-task` and the branch-derived match disagree, `.harness-task` wins. Log the mismatch in context.md Working Memory but do not silently switch tasks.
+
+If no task can be resolved, scaffold derives a task slug and task ID from the user's goal (see Task ID Generation). Scaffold writes `.harness-task` in the worktree root (if in a harness-managed worktree) and initializes `.harness/current-task` only when it does not yet exist and the new task is the sole task.
 
 ## Task ID Generation
 
 Generate two related names from the user's goal:
 
 - `task_slug`: a meaningful kebab-case slug derived from the goal. Use this for branch names, worktree names, and other human-facing labels.
-- `task_id`: the durable harness storage ID of the form `NNN-<task_slug>`. Use this only for `<harness_root>/.harness/tasks/<task_id>/` and `<harness_root>/.harness/current-task`.
+- `task_id`: the durable harness storage ID of the form `NNN-<task_slug>`. Use this only for `<harness_root>/.harness/tasks/<task_id>/`, `.harness-task`, and `<harness_root>/.harness/current-task`.
 
 The slug must be deterministic enough that a human can recognize the task from the ID alone.
 
@@ -104,11 +116,13 @@ Explicit `/harness scaffold|plan|run` --> use that mode
 
 Otherwise auto-infer (all paths relative to harness root):
   .harness/ does not exist                          --> scaffold
-  current task missing                              --> scaffold
-  current task config has `draft: true`            --> plan
-  current task config finalized, state.jsonl empty --> run (fresh)
-  current task config finalized, state.jsonl has events --> run (resume)
+  resolved task missing                             --> scaffold
+  resolved task config has `draft: true`            --> plan
+  resolved task config finalized, state.jsonl empty --> run (fresh)
+  resolved task config finalized, state.jsonl has events --> run (resume)
 ```
+
+If inside a worktree but task resolution conflicts or fails (`.harness-task` points to a non-existent task, branch matches multiple tasks, etc.), this is a repair condition — stop and ask for an explicit task identifier. Do not fall through to scaffold.
 
 If `state.jsonl` is empty but `context.md` or `artifacts/` clearly show the
 task predates ledger discipline, treat run entry as legacy archive recovery
@@ -138,7 +152,7 @@ Create or enter a worktree named `<task_slug>` using the current platform's work
 - **Task ID known** (plan, run, resume, or scaffold with explicit goal): derive or resolve the task ID first, then use its slug portion for worktree and branch naming.
 - **Task ID unknown** (scaffold without goal): trigger the Missing Goal Gate to obtain the goal, derive the task slug, allocate the task ID, then create the worktree from the slug. Do not create a worktree before the goal is known.
 
-After entering the worktree, record the worktree path in the task's context.md.
+After entering the worktree, record the worktree path in the task's context.md and write the task ID to `<worktree_root>/.harness-task`. If `.harness-task` already exists with the correct task ID, do not overwrite.
 
 ### Opting Out
 
@@ -161,7 +175,7 @@ Read `references/scaffold-protocol.md` and follow it.
 
 Also read `references/feedback-protocol.md` for the feedback note step at scaffold completion.
 
-Produces: `<harness_root>/.harness/current-task`, `<harness_root>/.harness/tasks/<task_id>/config.yaml`, `<harness_root>/.harness/tasks/<task_id>/context.md`, `<harness_root>/.harness/tasks/<task_id>/discovery.md`, `<harness_root>/.harness/tasks/<task_id>/state.jsonl`, `<harness_root>/.harness/tasks/<task_id>/artifacts/`, and an `AGENTS.md` update.
+Produces: `<harness_root>/.harness/tasks/<task_id>/config.yaml`, `<harness_root>/.harness/tasks/<task_id>/context.md`, `<harness_root>/.harness/tasks/<task_id>/discovery.md`, `<harness_root>/.harness/tasks/<task_id>/state.jsonl`, `<harness_root>/.harness/tasks/<task_id>/artifacts/`, `<worktree_root>/.harness-task` (if in a harness-managed worktree), and an `AGENTS.md` update. Initializes `<harness_root>/.harness/current-task` only when it does not yet exist and this is the sole task.
 
 Idempotent: re-running scaffold only fills gaps, never overwrites existing files.
 
@@ -272,6 +286,8 @@ These are not mandatory for every round. Invoke when the trigger condition match
 8. **Reviewer context is bounded.** Reviewers get the diff, relevant files, AGENTS.md, and config excerpts they need. They do not get proposer reasoning as authority.
 9. **Implementation protocol is binding.** Respect `implementation.protocol` from config; test-first tasks require RED evidence before production code.
 10. **Oracle lifting is progressive.** When `/critique` repeatedly confirms the same class of finding, invest in converting it to a `command` gate. Over time, the system should migrate from review-dependent to command-backed verification.
+11. **Task resolution is local-first.** Worktree-local affinity (`.harness-task`) and branch matching take precedence over the repo-global `current-task` default. The global default never overrides a worktree-local signal.
+12. **One controller per task.** Exactly one harness controller writes `state.jsonl`, `context.md`, and `discovery.md` for a given task. Child implementers dispatched by `/planning` do not write task state — the parent controller owns all ledger writes. Same-task multi-controller is not supported.
 
 ## Reference Index
 

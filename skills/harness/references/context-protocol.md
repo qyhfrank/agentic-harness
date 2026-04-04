@@ -99,7 +99,7 @@ On session start (fresh agent, no prior context in conversation), execute this s
 
 ```
 0. Resolve harness root                  -> walk up for .harness/, git worktree list, or git rev-parse --show-toplevel
-1. Resolve current task                  -> explicit task_id, unique branch/task_slug, <harness_root>/.harness/current-task, or sole task
+1. Resolve current task (local-first)    -> explicit task_id, <worktree_root>/.harness-task, unique branch/task_slug, sole task, <harness_root>/.harness/current-task
 2. Verify worktree state                 -> confirm session is in the task's worktree; re-enter if needed. Confirm harness root is accessible.
 3. Read task config.yaml                 -> task definition, boundaries, verification, evaluation, stop guards
 4. Read task context.md                  -> phase, progress, learnings, blockers
@@ -110,6 +110,11 @@ On session start (fresh agent, no prior context in conversation), execute this s
 5. Read task state.jsonl                 -> tail recent events, full scan if needed
 6. Read AGENTS.md                        -> protocol constraints, repo conventions
 ```
+
+Conflict rules for step 1:
+- If `.harness-task` and branch-derived match disagree, `.harness-task` wins. Log the mismatch in Working Memory.
+- If inside a worktree but local signals (`.harness-task`, branch match) both fail, this is a repair condition — stop and ask for an explicit task identifier. Do not fall through to `current-task` from inside a task-affined worktree.
+- If `.harness-task` does not exist but branch matching succeeds, opportunistically write `.harness-task` for future resilience.
 
 After reading, verify recovery by confirming these six answers before proceeding:
 

@@ -166,9 +166,15 @@ Written once when the Completion flow resolves the task's worktree.
 | `schema_version` | integer | `2` for new events. |
 | `event` | string | Event type identifier. |
 | `task_id` | string | Stable task identifier. |
-| `session_id` | string | Format `harness-run-YYYYMMDD-shortid`, aligned with feedback log. |
+| `session_id` | string | Format `harness-run-YYYYMMDD-shortid`. Identifies the run/resume session only — does not encode agent identity. |
 | `ts` | string | ISO-8601 UTC, e.g. `2026-04-02T09:14:33Z`. Time the event was written. |
 | `summary` | string | Short human-readable description. |
+
+### v2 Optional Provenance
+
+| Field | Type | Rules |
+|---|---|---|
+| `agent_id` | string | Provenance field identifying which controller wrote this event. Format: `harness-<role>-<shortid>` (e.g., `harness-controller-a1b2`). Common role is `controller`; child roles like `implementer` or `reviewer` may appear when `/planning` dispatch evolves to write events. This is provenance metadata, not a routing or locking mechanism. Events without `agent_id` remain valid — do not backfill or bump schema version. |
 
 ### Event-Specific Required Fields
 
@@ -196,10 +202,13 @@ Written once when the Completion flow resolves the task's worktree.
 | `error` | any | Error details. |
 | `branch` | any | Git branch name. |
 | `environment_fingerprint` | any | Environment identifier. |
+| `agent_id` | any | Controller provenance. Format: `harness-<role>-<shortid>`. See v2 Optional Provenance. |
 
 ## Session ID Format
 
 Use `harness-run-YYYYMMDD-shortid` to align with the feedback event log. The date is the session start date; `shortid` is a 4-character random hex suffix. Example: `harness-run-20260402-a1b2`.
+
+`session_id` identifies a run/resume session only. It does not encode agent identity. Agent provenance is carried by the separate `agent_id` field.
 
 ## Timing Semantics
 

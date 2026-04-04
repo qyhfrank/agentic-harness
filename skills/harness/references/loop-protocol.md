@@ -146,7 +146,11 @@ When `evaluation.metric.volatile: true` in config:
 
 ## Git Isolation
 
-Each active task works on branch `<task_slug>` inside a worktree (see Worktree Isolation in `SKILL.md`). All commits stay on the task branch until the user merges via the Completion flow. Harness state (`.harness/`) lives at the harness root, not in the worktree.
+Each active task works on branch `<task_slug>` inside a worktree (see Worktree Isolation in `SKILL.md`). Each harness-managed worktree carries a `.harness-task` file that binds it to exactly one task. All commits stay on the task branch until the user merges via the Completion flow. Harness state (`.harness/`) lives at the harness root, not in the worktree.
+
+Within a worktree, task resolution must not fall back to the repo-global `current-task`. If `.harness-task` or branch matching cannot resolve the task, this is a repair condition.
+
+Same-task multi-controller is not supported. Exactly one harness controller writes `state.jsonl`, `context.md`, and `discovery.md` for a given task. Embedded `/planning` implementer agents are safe because the parent controller owns all state writes.
 
 ## Session Boundary
 

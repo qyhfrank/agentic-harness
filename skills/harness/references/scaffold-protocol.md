@@ -38,16 +38,17 @@ Infer primary language and framework from:
 
 If ambiguous, list candidates and let the user confirm during plan phase.
 
-### 3. Resolve or Create Current Task
+### 3. Resolve or Create Task
 
-Harness always uses task-scoped state.
+Harness always uses task-scoped state. Use the local-first task resolution order from SKILL.md to check whether a task already exists for this context.
 
 Default scaffold behavior:
 - Create `<harness_root>/.harness/` if missing
 - Derive `task_slug` from the user's goal per the Task ID Generation rules in `SKILL.md`
-- Allocate `task_id` as `NNN-<task_slug>` (for example, "fix the auth timeout bug" -> `000-fix-auth-timeout-bug`)
+- Allocate `task_id` as `NNN-<task_slug>`. Before creating the task directory, re-scan `<harness_root>/.harness/tasks/` to verify the candidate numeric prefix is still unused (avoids race conditions when multiple agents scaffold concurrently).
 - Create `<harness_root>/.harness/tasks/<task_id>/` using the allocated ID
-- Write the allocated ID to `<harness_root>/.harness/current-task`
+- If in a harness-managed worktree, write the allocated ID to `<worktree_root>/.harness-task`
+- Initialize `<harness_root>/.harness/current-task` only when the file does not yet exist and this is the sole task. Do not overwrite an existing `current-task` — it is a root-scoped default, not an active-task pointer.
 
 If a task is already resolved, scaffold only fills gaps for that task.
 
@@ -58,7 +59,7 @@ All paths below are at the resolved harness root.
 ```
 <harness_root>/
 └── .harness/
-    ├── current-task
+    ├── current-task          # optional; initialized only on first sole-task bootstrap
     └── tasks/
         └── <task_id>/
             ├── config.yaml      # draft config
@@ -66,6 +67,9 @@ All paths below are at the resolved harness root.
             ├── discovery.md     # empty; populated during run phase
             ├── state.jsonl      # empty; baseline event added during preflight
             └── artifacts/       # empty, for future round outputs
+
+<worktree_root>/
+└── .harness-task             # worktree-local task affinity (written when in a harness-managed worktree)
 ```
 
 Idempotency rules:
@@ -248,12 +252,15 @@ This project uses the harness autonomous iteration engine.
 
 Harness state lives at the **harness root** (original repo root), not inside worktrees.
 
-- Current task pointer: `<harness_root>/.harness/current-task`
+- Repo default task (root-scoped only): `<harness_root>/.harness/current-task`
+- Worktree task affinity: `<worktree_root>/.harness-task`
 - Task configs: `<harness_root>/.harness/tasks/<task_id>/config.yaml`
 - Task state: `<harness_root>/.harness/tasks/<task_id>/state.jsonl`
 - Task context: `<harness_root>/.harness/tasks/<task_id>/context.md`
 - Task discoveries: `<harness_root>/.harness/tasks/<task_id>/discovery.md`
 - Task artifacts: `<harness_root>/.harness/tasks/<task_id>/artifacts/`
+
+Multi-task concurrency: one task per worktree, one controller per task. `.harness-task` binds a worktree to its task. Child implementers (dispatched by `/planning`) do not write `.harness/` state.
 
 Run `/harness plan` to configure, `/harness run` to execute.
 ```
@@ -272,12 +279,14 @@ Scaffold complete.
 
 Harness root: /path/to/repo
 Created:
-  <harness_root>/.harness/current-task
   <harness_root>/.harness/tasks/fix-auth-timeout-bug/config.yaml (draft)
   <harness_root>/.harness/tasks/fix-auth-timeout-bug/context.md
   <harness_root>/.harness/tasks/fix-auth-timeout-bug/discovery.md
   <harness_root>/.harness/tasks/fix-auth-timeout-bug/state.jsonl
   <harness_root>/.harness/tasks/fix-auth-timeout-bug/artifacts/
+  <worktree_root>/.harness-task
+
+current-task: initialized (sole task)  # or: unchanged (already exists) / not applicable (multiple tasks)
 
 Repository assessment:
   [ready]   Test: jest (42 test files, coverage configured)

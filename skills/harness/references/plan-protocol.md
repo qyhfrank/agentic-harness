@@ -11,7 +11,9 @@ Phase A: interactive config finalization. Guide the user from draft `config.yaml
 
 ### 1. Load Current State
 
-Resolve the harness root and current task, then read the task's `config.yaml` and `context.md` from `<harness_root>/.harness/tasks/<task_id>/`. Identify which fields are already filled vs empty.
+Resolve the harness root and current task using the local-first resolution order (see SKILL.md Task Resolution), then read the task's `config.yaml` and `context.md` from `<harness_root>/.harness/tasks/<task_id>/`. Identify which fields are already filled vs empty.
+
+If inside a worktree but `.harness-task` and branch matching both fail to resolve a task, this is a repair condition — ask for an explicit task identifier. Do not fall through to `current-task` from inside a worktree.
 
 ### 2. Task Definition
 
