@@ -134,7 +134,7 @@ Written exactly once per completed round.
     "confidence": 1.8
   },
   "artifacts": [
-    ".harness/tasks/fix-auth-timeout/artifacts/round-4/verify.txt"
+    ".harness/tasks/000-fix-auth-timeout/artifacts/round-4/verify.txt"
   ],
   "summary": "batched inference, reduced memory footprint"
 }

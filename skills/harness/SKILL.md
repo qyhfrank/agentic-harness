@@ -134,7 +134,7 @@ Otherwise auto-infer (all paths relative to harness root):
   resolved task config finalized, state.jsonl has events --> run (resume)
 ```
 
-If inside a worktree but task resolution conflicts or fails (`.harness-task` points to a non-existent task, branch matches multiple tasks, etc.), this is a repair condition — stop and ask for an explicit task identifier. Do not fall through to scaffold.
+If inside a worktree but task resolution conflicts or fails (`.harness-task` points to a non-existent task, branch matches multiple tasks, etc.) and tasks already exist, this is a repair condition — stop and ask for an explicit task identifier. Do not fall through to scaffold. If no tasks exist yet, proceed to scaffold normally.
 
 If `state.jsonl` is empty but `context.md` or `artifacts/` clearly show the
 task predates ledger discipline, treat run entry as legacy archive recovery
