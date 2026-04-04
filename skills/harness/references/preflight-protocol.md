@@ -22,7 +22,7 @@ Embedded `/planning` implementer agents do not replace the parent controller's l
 | # | Check | Rule |
 | --- | --- | --- |
 | 1 | Repo integrity | Git repo exists, not in detached HEAD, no stale `index.lock`. |
-| 2 | Clean working tree | No uncommitted changes (`git status --porcelain` is empty). |
+| 2 | Clean working tree | No uncommitted changes (`git status --porcelain` is empty). `.harness-task` is exempt — it is harness bookkeeping and may be untracked or modified without blocking preflight. |
 | 3 | Baseline verification | All mandatory verification gates pass on current HEAD. |
 | 4 | Scope resolution | Every path in `boundary.mutable` and `boundary.immutable` exists on disk. |
 

@@ -71,7 +71,7 @@ Resolve the current task using a local-first fallback chain:
 4. Sole task under `<harness_root>/.harness/tasks/`
 5. `<harness_root>/.harness/current-task` (root-scoped default, last resort)
 
-If inside a worktree and steps 1-3 fail to uniquely resolve a task, this is a repair condition — stop and ask for an explicit task identifier. Do not continue to step 4 (sole task) or step 5 (current-task) from inside a worktree. A worktree that was created by harness or that contains `.harness-task` is expected to have a resolvable local binding; failure to resolve is a sign of corruption or misconfiguration, not a reason to fall back to global state.
+If inside a worktree and steps 1-3 fail to uniquely resolve a task, check whether existing tasks are present (`<harness_root>/.harness/tasks/` is non-empty). If no tasks exist yet, this is a fresh scaffold — proceed normally. If tasks exist but none could be resolved, this is a repair condition — stop and ask for an explicit task identifier. Do not continue to step 4 (sole task) or step 5 (current-task) from inside a worktree when tasks exist but local binding failed.
 
 If `.harness-task` and the branch-derived match disagree, this is also a repair condition — stop and ask for an explicit task identifier. Do not silently proceed with either value. After the user confirms the correct task, rewrite `.harness-task` to match before continuing.
 

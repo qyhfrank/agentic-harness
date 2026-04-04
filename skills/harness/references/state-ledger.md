@@ -22,7 +22,7 @@ Written at the start of each harness session, before preflight or loop entry.
 {
   "schema_version": 2,
   "event": "session_started",
-  "task_id": "fix-auth-timeout",
+  "task_id": "000-fix-auth-timeout",
   "session_id": "harness-run-20260402-a1b2",
   "agent_id": "harness-controller-a1b2",
   "ts": "2026-04-02T09:00:00Z",
@@ -37,7 +37,7 @@ On resume, include recovery context:
 {
   "schema_version": 2,
   "event": "session_started",
-  "task_id": "fix-auth-timeout",
+  "task_id": "000-fix-auth-timeout",
   "session_id": "harness-run-20260402-c3d4",
   "agent_id": "harness-controller-a1b2",
   "ts": "2026-04-02T10:00:00Z",
@@ -58,7 +58,7 @@ Written on clean shutdown when the task is not terminal. Optional -- crash means
 {
   "schema_version": 2,
   "event": "session_ended",
-  "task_id": "fix-auth-timeout",
+  "task_id": "000-fix-auth-timeout",
   "session_id": "harness-run-20260402-a1b2",
   "agent_id": "harness-controller-a1b2",
   "ts": "2026-04-02T09:19:05Z",
@@ -78,7 +78,7 @@ Written once after preflight succeeds.
 {
   "schema_version": 2,
   "event": "baseline_recorded",
-  "task_id": "fix-auth-timeout",
+  "task_id": "000-fix-auth-timeout",
   "session_id": "harness-run-20260402-a1b2",
   "agent_id": "harness-controller-a1b2",
   "ts": "2026-04-02T09:01:12Z",
@@ -110,7 +110,7 @@ Written exactly once per completed round.
 {
   "schema_version": 2,
   "event": "round_completed",
-  "task_id": "fix-auth-timeout",
+  "task_id": "000-fix-auth-timeout",
   "session_id": "harness-run-20260402-a1b2",
   "agent_id": "harness-controller-a1b2",
   "ts": "2026-04-02T09:18:40Z",
@@ -150,7 +150,7 @@ Written once when the Completion flow resolves the task's worktree.
 {
   "schema_version": 2,
   "event": "task_disposed",
-  "task_id": "fix-auth-timeout",
+  "task_id": "000-fix-auth-timeout",
   "session_id": "harness-run-20260402-c3d4",
   "agent_id": "harness-controller-a1b2",
   "ts": "2026-04-02T10:25:00Z",
