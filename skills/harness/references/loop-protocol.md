@@ -78,6 +78,7 @@ After revert (`discard` or `crash`): verify the revert itself does not break bas
 Append one event to `state.jsonl` per `state-ledger.md`. Include v2 fields:
 - `ts`: current UTC time.
 - `session_id`: from the session initialized in preflight.
+- `agent_id`: from the controller identity established in preflight.
 - `round_started_at`: the UTC time when step 1 (Propose) began for this round. Track this in memory at the start of each round.
 
 Update context.md per `context-protocol.md` update discipline:
@@ -157,7 +158,7 @@ Same-task multi-controller is not supported. Exactly one harness controller writ
 When ending a session mid-loop:
 
 1. Complete the current round (do not leave a half-committed state).
-2. Append a `session_ended` event to `state.jsonl` with `reason` (`paused`, `handoff`, `budget_exhausted`, `stagnation`), current `round`, and `ts`.
+2. Append a `session_ended` event to `state.jsonl` with `reason` (`paused`, `handoff`, `budget_exhausted`, `stagnation`), current `round`, `ts`, and `agent_id`.
 3. Update context.md with full current state including timing anchors.
 4. Run full discovery hygiene per `discovery-protocol.md` (session end trigger).
 5. If mid-verify, record as `crash` and revert. Do not write `session_ended` (crash means it was not clean).

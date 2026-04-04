@@ -7,7 +7,7 @@ Run all checks below before entering the harness loop. On any mandatory failure,
 Before running checks, establish session and controller identity, then emit a `session_started` event to `state.jsonl`:
 
 - Generate a `session_id` in format `harness-run-YYYYMMDD-XXXX` (4-char random hex).
-- Generate an `agent_id` in format `harness-controller-XXXX` (4-char random hex). This identifies the controller for provenance. If resuming and the previous session's `agent_id` is known, reuse it for continuity; otherwise generate a fresh one.
+- Generate an `agent_id` in format `harness-controller-XXXX` (4-char random hex). This identifies the controller for provenance. On resume, read the most recent non-null `agent_id` from the current task's `state.jsonl` and reuse it for continuity; if none exists, generate a fresh one.
 - If this is a fresh run, set `reason: initial`.
 - If resuming (previous events exist in `state.jsonl`), check whether the last session ended cleanly (has a `session_ended` event). Set `reason` to `resume_after_pause` or `resume_after_recovery` accordingly. Include `prev_session_id` and `resume_round`.
 - Record `ts` as the current UTC time.
@@ -58,7 +58,7 @@ After all mandatory checks pass:
 
 ```
 Preflight Check Results:
-[PASS] Repo integrity: clean git repo on branch <task_id>
+[PASS] Repo integrity: clean git repo on branch <task_slug>
 [PASS] Clean tree: no uncommitted changes
 [PASS] Baseline verify: make test passed (14/14 tests, 72.3% coverage)
 [PASS] Scope resolve: all mutable/immutable paths exist

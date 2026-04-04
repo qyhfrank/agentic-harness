@@ -71,9 +71,21 @@ Resolve the current task using a local-first fallback chain:
 4. Sole task under `<harness_root>/.harness/tasks/`
 5. `<harness_root>/.harness/current-task` (root-scoped default, last resort)
 
-If inside a task-affined worktree (`.harness-task` exists or branch matches a task), never fall through to step 5. A failed local resolution in a worktree is a repair condition, not a reason to read the global default.
+If inside a worktree and steps 1-3 fail to uniquely resolve a task, this is a repair condition — stop and ask for an explicit task identifier. Do not continue to step 4 (sole task) or step 5 (current-task) from inside a worktree. A worktree that was created by harness or that contains `.harness-task` is expected to have a resolvable local binding; failure to resolve is a sign of corruption or misconfiguration, not a reason to fall back to global state.
 
-If `.harness-task` and the branch-derived match disagree, `.harness-task` wins. Log the mismatch in context.md Working Memory but do not silently switch tasks.
+If `.harness-task` and the branch-derived match disagree, this is also a repair condition — stop and ask for an explicit task identifier. Do not silently proceed with either value. After the user confirms the correct task, rewrite `.harness-task` to match before continuing.
+
+### Repair Flow
+
+When a repair condition is triggered:
+
+1. Stop all mode execution. Do not enter scaffold, plan, or run.
+2. Report the conflict or resolution failure to the user with concrete details (which file says what, which branch is checked out).
+3. Ask for an explicit task identifier.
+4. Verify the provided task exists under `<harness_root>/.harness/tasks/`.
+5. Rewrite `<worktree_root>/.harness-task` with the confirmed task ID (or create it if missing).
+6. Log the repair in context.md Working Memory.
+7. Resume mode detection with the now-resolved task.
 
 If no task can be resolved, scaffold derives a task slug and task ID from the user's goal (see Task ID Generation). Scaffold writes `.harness-task` in the worktree root (if in a harness-managed worktree) and initializes `.harness/current-task` only when it does not yet exist and the new task is the sole task.
 

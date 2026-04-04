@@ -279,11 +279,11 @@ Scaffold complete.
 
 Harness root: /path/to/repo
 Created:
-  <harness_root>/.harness/tasks/fix-auth-timeout-bug/config.yaml (draft)
-  <harness_root>/.harness/tasks/fix-auth-timeout-bug/context.md
-  <harness_root>/.harness/tasks/fix-auth-timeout-bug/discovery.md
-  <harness_root>/.harness/tasks/fix-auth-timeout-bug/state.jsonl
-  <harness_root>/.harness/tasks/fix-auth-timeout-bug/artifacts/
+  <harness_root>/.harness/tasks/000-fix-auth-timeout-bug/config.yaml (draft)
+  <harness_root>/.harness/tasks/000-fix-auth-timeout-bug/context.md
+  <harness_root>/.harness/tasks/000-fix-auth-timeout-bug/discovery.md
+  <harness_root>/.harness/tasks/000-fix-auth-timeout-bug/state.jsonl
+  <harness_root>/.harness/tasks/000-fix-auth-timeout-bug/artifacts/
   <worktree_root>/.harness-task
 
 current-task: initialized (sole task)  # or: unchanged (already exists) / not applicable (multiple tasks)

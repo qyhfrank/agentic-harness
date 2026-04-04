@@ -24,6 +24,7 @@ Written at the start of each harness session, before preflight or loop entry.
   "event": "session_started",
   "task_id": "fix-auth-timeout",
   "session_id": "harness-run-20260402-a1b2",
+  "agent_id": "harness-controller-a1b2",
   "ts": "2026-04-02T09:00:00Z",
   "reason": "initial",
   "summary": "fresh session on task branch"
@@ -38,6 +39,7 @@ On resume, include recovery context:
   "event": "session_started",
   "task_id": "fix-auth-timeout",
   "session_id": "harness-run-20260402-c3d4",
+  "agent_id": "harness-controller-a1b2",
   "ts": "2026-04-02T10:00:00Z",
   "reason": "resume_after_recovery",
   "prev_session_id": "harness-run-20260402-a1b2",
@@ -58,6 +60,7 @@ Written on clean shutdown when the task is not terminal. Optional -- crash means
   "event": "session_ended",
   "task_id": "fix-auth-timeout",
   "session_id": "harness-run-20260402-a1b2",
+  "agent_id": "harness-controller-a1b2",
   "ts": "2026-04-02T09:19:05Z",
   "round": 4,
   "reason": "paused",
@@ -77,6 +80,7 @@ Written once after preflight succeeds.
   "event": "baseline_recorded",
   "task_id": "fix-auth-timeout",
   "session_id": "harness-run-20260402-a1b2",
+  "agent_id": "harness-controller-a1b2",
   "ts": "2026-04-02T09:01:12Z",
   "round": 0,
   "commit": "a1b2c3d",
@@ -108,6 +112,7 @@ Written exactly once per completed round.
   "event": "round_completed",
   "task_id": "fix-auth-timeout",
   "session_id": "harness-run-20260402-a1b2",
+  "agent_id": "harness-controller-a1b2",
   "ts": "2026-04-02T09:18:40Z",
   "round": 4,
   "round_started_at": "2026-04-02T09:01:30Z",
@@ -147,6 +152,7 @@ Written once when the Completion flow resolves the task's worktree.
   "event": "task_disposed",
   "task_id": "fix-auth-timeout",
   "session_id": "harness-run-20260402-c3d4",
+  "agent_id": "harness-controller-a1b2",
   "ts": "2026-04-02T10:25:00Z",
   "round": 12,
   "disposition": "merged",
@@ -174,7 +180,7 @@ Written once when the Completion flow resolves the task's worktree.
 
 | Field | Type | Rules |
 |---|---|---|
-| `agent_id` | string | Provenance field identifying which controller wrote this event. Format: `harness-<role>-<shortid>` (e.g., `harness-controller-a1b2`). Common role is `controller`; child roles like `implementer` or `reviewer` may appear when `/planning` dispatch evolves to write events. This is provenance metadata, not a routing or locking mechanism. Events without `agent_id` remain valid — do not backfill or bump schema version. |
+| `agent_id` | string | Provenance field identifying which controller wrote this event. Format: `harness-controller-<shortid>` (e.g., `harness-controller-a1b2`). Current protocol: only the harness controller writes events, so `agent_id` is always `harness-controller-*`. Child roles (`implementer`, `reviewer`) are reserved for future use if `/planning` dispatch evolves to write events directly — they are not valid in the current protocol. This is provenance metadata, not a routing or locking mechanism. Events without `agent_id` remain valid — do not backfill or bump schema version. On resume, read the most recent non-null `agent_id` from the current task's `state.jsonl`; if none exists, generate a fresh one. |
 
 ### Event-Specific Required Fields
 
@@ -202,7 +208,7 @@ Written once when the Completion flow resolves the task's worktree.
 | `error` | any | Error details. |
 | `branch` | any | Git branch name. |
 | `environment_fingerprint` | any | Environment identifier. |
-| `agent_id` | any | Controller provenance. Format: `harness-<role>-<shortid>`. See v2 Optional Provenance. |
+| `agent_id` | any | Controller provenance. Format: `harness-controller-<shortid>`. See v2 Optional Provenance. |
 
 ## Session ID Format
 

@@ -33,7 +33,7 @@ task:
   source: ""
 ```
 
-`task.id` is set during scaffold and must not be changed during plan. It is used as the directory name, branch name, worktree name, ledger path, and artifact path. If the user wants a different ID, re-scaffold a new task instead.
+`task.id` is set during scaffold and must not be changed during plan. It drives the task directory, ledger path, artifact path, and `.harness-task` value. Branch and worktree names use `task_slug` (the portion after the `NNN-` prefix), not the full `task_id`. If the user wants a different ID, re-scaffold a new task instead.
 
 If the user provided a goal during scaffold, `description` is pre-filled. Confirm it captures the intent.
 

@@ -112,9 +112,9 @@ On session start (fresh agent, no prior context in conversation), execute this s
 ```
 
 Conflict rules for step 1:
-- If `.harness-task` and branch-derived match disagree, `.harness-task` wins. Log the mismatch in Working Memory.
-- If inside a worktree but local signals (`.harness-task`, branch match) both fail, this is a repair condition — stop and ask for an explicit task identifier. Do not fall through to `current-task` from inside a task-affined worktree.
-- If `.harness-task` does not exist but branch matching succeeds, opportunistically write `.harness-task` for future resilience.
+- If `.harness-task` and branch-derived match disagree, this is a repair condition — stop and ask for an explicit task identifier. Do not proceed with either value. After the user confirms, rewrite `.harness-task` before continuing.
+- If inside a worktree but local signals (`.harness-task`, branch match) both fail, this is a repair condition — stop and ask for an explicit task identifier. Do not fall through to `sole task` or `current-task` from inside a worktree.
+- If `.harness-task` does not exist but branch matching succeeds, opportunistically write `.harness-task` for future resilience (only in harness-managed worktrees, not in the main checkout when running in-place).
 
 After reading, verify recovery by confirming these six answers before proceeding:
 
