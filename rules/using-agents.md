@@ -58,7 +58,9 @@ Notes:
 
 ## Pre-Flight Gate
 
-Evaluate in order before spawning any child context. Stop at first match:
+**Hard gate.** Before starting any implementation task with 3+ independent subtasks or 3+ unrelated files, evaluate this gate. Do not skip it in favor of serial execution. This checkpoint pairs with the pre-commit checkpoint in the engineering rule.
+
+Evaluate in order. Stop at first match:
 
 1. Fits in parent context, or cold-start cost > benefit? -> **local, do not spawn**
 2. Subagent would need to reconstruct significant parent context? -> **local, do not spawn**
