@@ -79,6 +79,8 @@ Skip the Thinker when:
 
 When the Thinker produces analysis and a plan, evaluate the Pre-Flight Gate to decide execution strategy.
 
+For design decisions with multiple valid approaches, prefer dispatching multiple Thinkers in fanout sample mode (3 perspectives minimum) and synthesizing their outputs with your own analysis, rather than relying on a single Thinker or your own reasoning alone. The value is in cross-model perspective diversity, not just depth.
+
 ## Pre-Flight Gate
 
 **Hard gate.** Before starting any implementation task with 3+ independent subtasks or 3+ unrelated files, evaluate this gate. Do not skip it in favor of serial execution. This checkpoint pairs with the pre-commit checkpoint in the engineering rule.
