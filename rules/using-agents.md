@@ -56,13 +56,11 @@ Notes:
 8. **Child prompts must be self-contained.** Every child prompt must include: scope (one problem domain), goal, constraints (what not to touch), and expected output format. No placeholders or implicit context inheritance.
 9. **Child failure must be surfaced.** Do not silently swallow child failures. Failed or timed-out children still consume budget. Assess root cause: task-scoped failure -> attempt locally; systemic failure -> surface to user.
 
-## Pre-Flight Gate
+## Reasoning Checkpoint
 
-**Hard gate.** Before starting any implementation task with 3+ independent subtasks or 3+ unrelated files, evaluate this gate. Do not skip it in favor of serial execution. This checkpoint pairs with the pre-commit checkpoint in the engineering rule.
+**Hard gate.** Before starting any non-trivial task -- implementation, design, analysis, or investigation -- assess whether it needs a Thinker reasoning pass. This checkpoint fires independently of the Pre-Flight Gate below; it applies even to single-file design decisions and architectural discussions.
 
-### Reasoning Checkpoint
-
-Before evaluating dispatch strategy, assess whether the task needs a Thinker reasoning pass. **Default to yes** for non-trivial tasks where the approach is not obvious.
+**Default to yes** for non-trivial tasks where the approach is not obvious.
 
 Route to Thinker (`/codex-exec` on Claude Code) when any of these hold:
 
@@ -79,9 +77,11 @@ Skip the Thinker when:
 - Task is mechanical (rename, reformat, apply a known pattern)
 - Context setup cost for the Thinker exceeds the reasoning benefit
 
-When the Thinker produces analysis and a plan, return to the dispatch evaluation below to decide execution strategy.
+When the Thinker produces analysis and a plan, evaluate the Pre-Flight Gate to decide execution strategy.
 
-### Dispatch Evaluation
+## Pre-Flight Gate
+
+**Hard gate.** Before starting any implementation task with 3+ independent subtasks or 3+ unrelated files, evaluate this gate. Do not skip it in favor of serial execution. This checkpoint pairs with the pre-commit checkpoint in the engineering rule.
 
 Evaluate in order. Stop at first match:
 
