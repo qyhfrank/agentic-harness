@@ -60,6 +60,29 @@ Notes:
 
 **Hard gate.** Before starting any implementation task with 3+ independent subtasks or 3+ unrelated files, evaluate this gate. Do not skip it in favor of serial execution. This checkpoint pairs with the pre-commit checkpoint in the engineering rule.
 
+### Reasoning Checkpoint
+
+Before evaluating dispatch strategy, assess whether the task needs a Thinker reasoning pass. **Default to yes** for non-trivial tasks where the approach is not obvious.
+
+Route to Thinker (`/codex-exec` on Claude Code) when any of these hold:
+
+- User describes a problem without specifying a solution path
+- Multiple valid approaches exist and the best one is not obvious
+- Task involves design decisions, tradeoffs, or architecture choices
+- Understanding the problem requires reasoning across multiple files or systems
+- Jumping to implementation would likely require backtracking
+
+Skip the Thinker when:
+
+- Task is trivial (single file, clear path, < 3 steps)
+- User has already provided a specific implementation plan
+- Task is mechanical (rename, reformat, apply a known pattern)
+- Context setup cost for the Thinker exceeds the reasoning benefit
+
+When the Thinker produces analysis and a plan, return to the dispatch evaluation below to decide execution strategy.
+
+### Dispatch Evaluation
+
 Evaluate in order. Stop at first match:
 
 1. Fits in parent context, or cold-start cost > benefit? -> **local, do not spawn**
