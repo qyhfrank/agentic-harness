@@ -58,6 +58,7 @@ Rules for context.md maintenance, state.jsonl schema, and cross-session recovery
 | What patterns have we noticed? | `context.md` Working Memory |
 | What should we do next? | `context.md` Next Steps |
 | What constraints/dead-ends persist? | `context.md` Durable Notes |
+| Evidence manifest for a round? | `artifacts/round-{N}/manifest.json` |
 | Exact output? | `artifacts/round-{N}/` |
 
 `state.jsonl` records facts. `context.md` records meaning, reusable knowledge, and next steps.

@@ -27,6 +27,7 @@ The autonomous propose-verify-evaluate-record cycle, plus verification gates and
   - `tdd_preferred`: follow TDD when practical, record why if skipped.
   - `direct`: no red-first required, but behavior changes need verification coverage.
 - Make code changes within `boundary.mutable`. Never touch `boundary.immutable`.
+- Enforce `execution_policy` from config: do not run commands matching `dangerous_commands` without human approval, never read or stage files matching `secret_patterns`, respect `network_policy` and `dependency_install` settings.
 - Apply `atomicity_test`: if the change description needs "and", split into separate rounds.
 
 ### 2. Commit
@@ -44,11 +45,24 @@ Filter gates by frequency:
 
 Execute eligible gates in order:
 1. Run all mandatory `command` gates.
-2. On all pass, run `agent_review` gates (if configured). Use `/critique` as the review engine.
-3. On pass or escalation, queue `human_review` if configured.
-4. Short-circuit on first mandatory deterministic `fail`.
+2. If `architecture_guard` is configured and its frequency matches, run it. Treat as a mandatory command gate (fail = discard).
+3. On all pass, run `agent_review` gates (if configured). Use `/critique` as the review engine.
+4. On pass or escalation, queue `human_review` if configured.
+5. Short-circuit on first mandatory deterministic `fail`.
 
 Capture full stdout/stderr to `artifacts/round-{N}/`.
+
+Write an evidence manifest to `artifacts/round-{N}/manifest.json`:
+
+```json
+{
+  "round": 4,
+  "commit": "m0n1o2p",
+  "commands": [{"name": "make test", "exit_code": 0}, {"name": "eslint .", "exit_code": 0}],
+  "artifacts": ["stdout.log", "attempted.patch"],
+  "diff_stat": "+42 -17 across 3 files"
+}
+```
 
 ### 4. Evaluate
 

@@ -24,6 +24,9 @@ Assess agent-friendliness across these dimensions:
 | CI | CI config files | Glob for `.github/workflows/*`, `.gitlab-ci.yml`, `Jenkinsfile`, `.circleci/*` |
 | Structure | AGENTS.md / README, directory layout | Check root for guidance files |
 | Verification methods | Benchmarks, profiling tools, e2e suites | Glob for `bench*`, `perf*`, `e2e*`, `integration*`, `smoke*`; check package scripts |
+| Golden Path Commands | `make test`, `make lint`, `make bootstrap` or equivalents | Check Makefile, package.json scripts, pyproject.toml scripts for standard entry points |
+| ADR / decision records | Architecture Decision Records | Check for `docs/adr/`, `docs/decisions/`, `ADR-*.md` patterns |
+| Machine-readable CLI | `--json` or structured output support | Check if primary CLI tools offer `--json` flags (advisory, not blocking) |
 
 Classify each as: `ready`, `partial`, or `missing`. Record findings in a gap report.
 
@@ -105,11 +108,20 @@ verification:
     # frequency: every_round (default) | milestone | final
   guard: []
   escalation: []
+  architecture_guard:       # optional command gate for layer/dependency enforcement
+    # command: ""           # e.g., "python scripts/check_layers.py" or "deptrac analyse"
+    # frequency: milestone  # typically milestone, not every_round
 
 rollback:
   granularity: commit
   strategy: revert_commit
   preserve_failed_experiments: true
+
+execution_policy:
+  dangerous_commands: []       # patterns requiring human approval (e.g., "rm -rf", "DROP TABLE")
+  secret_patterns: [".env", "*.pem", "credentials.*"]  # never read or stage these
+  network_policy: allow        # allow | deny | prompt
+  dependency_install: prompt   # allow | deny | prompt — controls npm install, pip install, etc.
 ```
 
 Pre-fill what can be inferred:
