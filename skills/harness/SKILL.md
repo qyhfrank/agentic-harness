@@ -197,22 +197,17 @@ Scaffold requires a concrete task goal, not just a request to initialize harness
 
 ## Mode: scaffold
 
-Read `references/scaffold-protocol.md` and follow it.
+Read `references/setup-protocol.md` Phase 0 and follow it.
 
-
-Produces: `<harness_root>/.harness/tasks/<task_id>/config.yaml`, `<harness_root>/.harness/tasks/<task_id>/context.md`, `<harness_root>/.harness/tasks/<task_id>/state.jsonl`, and `<worktree_root>/.harness-task` (if in a harness-managed worktree). `artifacts/` is created lazily when first needed. Also updates `AGENTS.md`. Initializes `<harness_root>/.harness/current-task` only when it does not yet exist and this is the sole task.
+Produces: `config.yaml`, `context.md`, `state.jsonl`, `.harness-task`. `artifacts/` is created lazily. Also updates `AGENTS.md`.
 
 Idempotent: re-running scaffold only fills gaps, never overwrites existing files.
 
-Before loading `references/scaffold-protocol.md`, ensure the goal is known. If the goal is missing, ask for it first and stop there.
+Before loading, ensure the goal is known. If missing, ask first and stop there.
 
 ## Mode: plan
 
-Read these references before proceeding:
-- `references/plan-protocol.md` -- interactive config finalization flow
-- `references/state-ledger.md` -- `state.jsonl` schema and reading conventions
-- `references/verification-gate.md` -- gate types and verifier semantics
-- `references/evaluation-protocol.md` -- evaluation roles and completion rules
+Read `references/setup-protocol.md` Phase A.
 
 Produces: finalized config.yaml (removes `draft: true`), updated context.md.
 
@@ -221,17 +216,12 @@ Exit criteria: mutable surface, verification commands, evaluation policy, and st
 ## Mode: run
 
 Read these references before proceeding:
-- `references/loop-protocol.md` -- core iteration lifecycle
-- `references/preflight-protocol.md` -- pre-loop checks
-- `references/verification-gate.md` -- gate execution and verifier verdict schema
-- `references/evaluation-protocol.md` -- evaluation decisions and close authority
-- `references/state-ledger.md` -- state recording
-- `references/context-protocol.md` -- context.md update and session recovery
-- `references/context-protocol.md` -- context.md updates, durable notes, session recovery
+- `references/run-protocol.md` -- core iteration lifecycle, verification gates, evaluation rules
+- `references/recovery-protocol.md` -- context.md updates, state.jsonl schema, session recovery
 
 ### Recovery (resume)
 
-When `state.jsonl` has existing events, this is a resumed session. Follow the recovery protocol in `references/context-protocol.md` before entering the loop.
+When `state.jsonl` has existing events, this is a resumed session. Follow the recovery protocol in `references/recovery-protocol.md` before entering the loop.
 
 ### Recovery (legacy archive)
 
@@ -250,7 +240,7 @@ Follow the legacy archive recovery path in `references/context-protocol.md`:
 
 ### Fresh Start
 
-Run preflight checks first. On pass, enter the loop defined in `references/loop-protocol.md`.
+Run preflight checks first. On pass, enter the loop defined in `references/run-protocol.md`.
 
 ### Caffeine Overlay Semantics
 
@@ -259,7 +249,7 @@ When `caffeine` wraps `harness`, ordinary rounds stay silent unless a true block
 - `state.jsonl`, `context.md`, and task artifacts are the in-progress checkpoint surface.
 - A user-facing `Wake-Up Handoff` belongs only to real stop conditions: `complete`, budget exhaustion, stagnation, explicit pause, session end, or a hard blocker.
 - Do not treat a successful `keep` round as a reason to stop or summarize to the user in handoff format while the task still has non-blocked work remaining.
-- If the user sends a sideband correction during run (for example, "keep going" or "you stopped too early"), record a `user_directive` event to `state.jsonl` (per `state-ledger.md`), then absorb it through the loop owner state and take the next concrete run action in the same turn rather than ending on a prose-only acknowledgement.
+- If the user sends a sideband correction during run (for example, "keep going" or "you stopped too early"), absorb it through the loop owner state and take the next concrete run action in the same turn rather than ending on a prose-only acknowledgement.
 
 ## Completion
 
@@ -325,12 +315,6 @@ These are not mandatory for every round. Invoke when the trigger condition match
 
 | File | Purpose | Loaded by |
 |---|---|---|
-| `scaffold-protocol.md` | Phase 0: repo diagnosis, task directory creation | scaffold |
-| `plan-protocol.md` | Phase A: interactive config finalization | plan |
-| `loop-protocol.md` | Phase B: propose-verify-evaluate-record cycle | run |
-| `preflight-protocol.md` | Pre-loop validation checks | run |
-| `verification-gate.md` | Gate types, verifier verdict schema, volatile metrics | plan, run |
-| `evaluation-protocol.md` | Evaluator role, metric interpretation, close authority | plan, run |
-| `state-ledger.md` | JSONL event schema and reading conventions | plan, run |
-| `context-protocol.md` | context.md updates, session recovery | run |
-| `context-protocol.md` | context.md updates, durable notes, session recovery | run |
+| `setup-protocol.md` | Scaffold, plan, and preflight | scaffold, plan |
+| `run-protocol.md` | Propose-verify-evaluate cycle, gates, evaluation rules | run |
+| `recovery-protocol.md` | context.md maintenance, state.jsonl schema, session recovery | run |
