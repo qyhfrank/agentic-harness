@@ -65,7 +65,6 @@ All paths below are at the resolved harness root.
             ├── config.yaml      # draft config
             ├── context.md       # initial context
             ├── state.jsonl      # empty; baseline event added during preflight
-            ├── discovery.md     # optional; create only after first durable discovery
             └── artifacts/       # optional; create lazily when a round emits outputs
 
 <worktree_root>/
@@ -197,6 +196,9 @@ Leave everything else empty with `# fill during plan` comments when helpful.
 ## Working Memory
 (empty -- will be populated during plan and run phases)
 
+## Durable Notes
+(empty -- dead ends, constraints, tool quirks added during run phase)
+
 ## Decisions
 (empty)
 
@@ -207,42 +209,6 @@ Leave everything else empty with `# fill during plan` comments when helpful.
 ### 7. Generate state.jsonl
 
 Create an empty file. Do not write a header row. The baseline event is created during preflight (run phase).
-
-### 7a. discovery.md Is Lazy
-
-Do not create `discovery.md` during scaffold.
-
-Create it only when the run phase first promotes durable knowledge out of
-`context.md` Working Memory per `discovery-protocol.md`.
-
-When first created, use this empty template:
-
-```markdown
-# Task Discoveries
-
-## Snapshot
-- active: 0 | needs_recheck: 0 | contested: 0
-- last_hygiene: -
-- read_first: (none)
-
-## Active Index
-(empty)
-
-## Environment Facts
-
-## Codebase Map
-
-## Dead Ends
-
-## Tool & API Behavior
-
-## Verification Insights
-
-## Constraints
-
-## Archived
-(empty)
-```
 
 ### 8. Update AGENTS.md
 
@@ -260,7 +226,6 @@ Harness state lives at the **harness root** (original repo root), not inside wor
 - Task configs: `<harness_root>/.harness/tasks/<task_id>/config.yaml`
 - Task state: `<harness_root>/.harness/tasks/<task_id>/state.jsonl`
 - Task context: `<harness_root>/.harness/tasks/<task_id>/context.md`
-- Task discoveries (optional): `<harness_root>/.harness/tasks/<task_id>/discovery.md`
 - Task artifacts (optional): `<harness_root>/.harness/tasks/<task_id>/artifacts/`
 
 Multi-task concurrency: one task per worktree, one controller per task. `.harness-task` binds a worktree to its task. Child implementers (dispatched by `/planning`) do not write `.harness/` state.
@@ -284,9 +249,7 @@ Harness root: /path/to/repo
 Created:
   <harness_root>/.harness/tasks/000-fix-auth-timeout-bug/config.yaml (draft)
   <harness_root>/.harness/tasks/000-fix-auth-timeout-bug/context.md
-  <harness_root>/.harness/tasks/000-fix-auth-timeout-bug/discovery.md
   <harness_root>/.harness/tasks/000-fix-auth-timeout-bug/state.jsonl
-  <harness_root>/.harness/tasks/000-fix-auth-timeout-bug/artifacts/
   <worktree_root>/.harness-task
 
 current-task: initialized (sole task)  # or: unchanged (already exists) / not applicable (multiple tasks)
@@ -301,9 +264,3 @@ Next: run `/harness plan` to finalize config.yaml
 ```
 
 Report the harness root path and worktree branch alongside the file listing so the user knows where state and code live.
-
-## Feedback Note
-
-Before reporting scaffold complete, write a structured feedback note per `feedback-protocol.md`.
-
-Auto-detect: check all config values against defined vocabularies. If any value is out-of-vocab, append a `bad_default` event to `~/.asb/state/harness-feedback/events.jsonl`.

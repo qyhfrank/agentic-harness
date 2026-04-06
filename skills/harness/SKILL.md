@@ -23,7 +23,6 @@ Harness always uses task-scoped state. The minimal durable surface is:
       config.yaml
       context.md
       state.jsonl
-      discovery.md      # optional; create only after the first durable discovery
       artifacts/        # optional; create lazily when a round actually emits outputs
 
 <worktree_root>/
@@ -41,9 +40,8 @@ Single-task usage is just the case where only one task exists. It is not a secon
 Default recovery and execution should work from the core task files alone:
 
 - `config.yaml` -> contract
-- `context.md` -> current state and next action
+- `context.md` -> current state, durable notes, and next action
 - `state.jsonl` -> append-only history
-- `discovery.md` -> optional durable knowledge layer
 - `artifacts/` -> optional raw outputs and evidence
 
 Non-canonical task files such as `README.md`, `plan.md`, `design.md`, or extra
@@ -201,9 +199,8 @@ Scaffold requires a concrete task goal, not just a request to initialize harness
 
 Read `references/scaffold-protocol.md` and follow it.
 
-Also read `references/feedback-protocol.md` for the feedback note step at scaffold completion.
 
-Produces: `<harness_root>/.harness/tasks/<task_id>/config.yaml`, `<harness_root>/.harness/tasks/<task_id>/context.md`, `<harness_root>/.harness/tasks/<task_id>/state.jsonl`, and `<worktree_root>/.harness-task` (if in a harness-managed worktree). `discovery.md` and `artifacts/` are created lazily when first needed. Also updates `AGENTS.md`. Initializes `<harness_root>/.harness/current-task` only when it does not yet exist and this is the sole task.
+Produces: `<harness_root>/.harness/tasks/<task_id>/config.yaml`, `<harness_root>/.harness/tasks/<task_id>/context.md`, `<harness_root>/.harness/tasks/<task_id>/state.jsonl`, and `<worktree_root>/.harness-task` (if in a harness-managed worktree). `artifacts/` is created lazily when first needed. Also updates `AGENTS.md`. Initializes `<harness_root>/.harness/current-task` only when it does not yet exist and this is the sole task.
 
 Idempotent: re-running scaffold only fills gaps, never overwrites existing files.
 
@@ -216,7 +213,6 @@ Read these references before proceeding:
 - `references/state-ledger.md` -- `state.jsonl` schema and reading conventions
 - `references/verification-gate.md` -- gate types and verifier semantics
 - `references/evaluation-protocol.md` -- evaluation roles and completion rules
-- `references/feedback-protocol.md` -- feedback note at plan finalization
 
 Produces: finalized config.yaml (removes `draft: true`), updated context.md.
 
@@ -231,8 +227,7 @@ Read these references before proceeding:
 - `references/evaluation-protocol.md` -- evaluation decisions and close authority
 - `references/state-ledger.md` -- state recording
 - `references/context-protocol.md` -- context.md update and session recovery
-- `references/discovery-protocol.md` -- durable knowledge layer: admission, curation, recovery
-- `references/feedback-protocol.md` -- feedback notes at round/session boundaries
+- `references/context-protocol.md` -- context.md updates, durable notes, session recovery
 
 ### Recovery (resume)
 
@@ -261,7 +256,7 @@ Run preflight checks first. On pass, enter the loop defined in `references/loop-
 
 When `caffeine` wraps `harness`, ordinary rounds stay silent unless a true blocker appears.
 
-- `state.jsonl`, `context.md`, `discovery.md`, and task artifacts are the in-progress checkpoint surface.
+- `state.jsonl`, `context.md`, and task artifacts are the in-progress checkpoint surface.
 - A user-facing `Wake-Up Handoff` belongs only to real stop conditions: `complete`, budget exhaustion, stagnation, explicit pause, session end, or a hard blocker.
 - Do not treat a successful `keep` round as a reason to stop or summarize to the user in handoff format while the task still has non-blocked work remaining.
 - If the user sends a sideband correction during run (for example, "keep going" or "you stopped too early"), record a `user_directive` event to `state.jsonl` (per `state-ledger.md`), then absorb it through the loop owner state and take the next concrete run action in the same turn rather than ending on a prose-only acknowledgement.
@@ -324,7 +319,7 @@ These are not mandatory for every round. Invoke when the trigger condition match
 9. **Implementation protocol is binding.** Respect `implementation.protocol` from config; test-first tasks require RED evidence before production code.
 10. **Oracle lifting is progressive.** When `/critique` repeatedly confirms the same class of finding, invest in converting it to a `command` gate. Over time, the system should migrate from review-dependent to command-backed verification.
 11. **Task resolution is local-first.** Worktree-local affinity (`.harness-task`) and branch matching take precedence over the repo-global `current-task` default. The global default never overrides a worktree-local signal.
-12. **One controller per task.** Exactly one harness controller writes `state.jsonl`, `context.md`, and `discovery.md` for a given task. Child implementers dispatched by `/planning` do not write task state — the parent controller owns all ledger writes. Same-task multi-controller is not supported.
+12. **One controller per task.** Exactly one harness controller writes `state.jsonl` and `context.md` for a given task. Child implementers dispatched by `/planning` do not write task state — the parent controller owns all ledger writes. Same-task multi-controller is not supported.
 
 ## Reference Index
 
@@ -338,5 +333,4 @@ These are not mandatory for every round. Invoke when the trigger condition match
 | `evaluation-protocol.md` | Evaluator role, metric interpretation, close authority | plan, run |
 | `state-ledger.md` | JSONL event schema and reading conventions | plan, run |
 | `context-protocol.md` | context.md updates, session recovery | run |
-| `discovery-protocol.md` | Durable knowledge layer: admission, curation, recovery | run |
-| `feedback-protocol.md` | Skill-level feedback notes and event schema | scaffold, plan, run |
+| `context-protocol.md` | context.md updates, durable notes, session recovery | run |

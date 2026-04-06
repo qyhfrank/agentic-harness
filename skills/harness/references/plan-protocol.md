@@ -180,9 +180,3 @@ Plan mode may span multiple sessions. On re-entry:
 - Suggest concrete values based on repo analysis. Let the user confirm or adjust.
 - If the user says "just use defaults", fill reasonable defaults and show for confirmation.
 - If the user provides a spec or plan file, extract answers from it before asking.
-
-## Feedback Note
-
-After finalizing config, write a structured feedback note per `feedback-protocol.md`.
-
-Auto-detect: compare finalized config against the scaffold draft. Any field where the user overrode the draft value generates a `bad_default` or `protocol_gap` event (source: `human`).

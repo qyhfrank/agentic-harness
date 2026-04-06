@@ -15,17 +15,16 @@ Maintenance rules for `.harness/tasks/<task_id>/context.md` and cross-session re
 - current_objective: "reduce inference latency below 200ms"
 - best_result: "76.5 latency score (round 9, commit abc1234)"
 - last_action: "round 11 attempted X, verifier failed (lint regression), reverted"
-- active_discoveries: 6 active / 0 needs_recheck
 - session_id: harness-run-20260402-a1b2
-- session_started: 2026-04-02T09:00:00Z
-- task_started: 2026-04-02T08:30:00Z
-- last_round_started: 2026-04-02T09:45:00Z
-- timing_coverage: full since round 3 (rounds 0-2 predate v2)
 
 ## Working Memory
 - Observations about the codebase relevant to the task
 - Patterns noticed across rounds
-- Dead ends to avoid
+
+## Durable Notes
+- [dead-end] Parser reorder only masks import bug; fix must target resolver (round 5, artifacts/round-5/parser-reorder.patch)
+- [constraint] Public API must preserve v1 response shape (round 5)
+- [tool-quirk] npm ci broken on node 18 lockfile, use npm install instead (round 7)
 
 ## Decisions
 - Key decisions made during plan phase and run phase
@@ -39,23 +38,24 @@ Maintenance rules for `.harness/tasks/<task_id>/context.md` and cross-session re
 
 | Section | Contains | Update frequency |
 |---|---|---|
-| Current State | Phase, round counter, best result, last action, harness root, worktree info, session and timing anchors, discovery summary | Every round (overwrite) |
-| Working Memory | Current-round operative observations, discovery ID references | Every round (curate) |
+| Current State | Phase, round counter, best result, last action, harness root, worktree info, session and timing anchors | Every round (overwrite) |
+| Working Memory | Current-round operative observations | Every round (curate) |
+| Durable Notes | Dead ends, constraints, tool quirks, codebase insights that persist across rounds | When discovered (append), prune when stale |
 | Decisions | Committed choices with rationale | When a decision is made (append) |
 | Next Steps | Immediate priorities for upcoming rounds | Every round (full rewrite) |
 
 ## Update Discipline
 
 ### Current State
-Overwrite all fields every round. Fields must reflect the state after the round completes, not before. When `discovery.md` has active entries, include `active_discoveries` (see `discovery-protocol.md`).
+Overwrite all fields every round. Fields must reflect the state after the round completes, not before.
 
 ### Working Memory
 - Add new observations discovered during the round.
 - Remove or compress entries that are no longer relevant.
 - Move settled observations to Decisions when they become committed choices.
-- Promote durable cross-round knowledge to `discovery.md` per `discovery-protocol.md`. Replace promoted items with an ID reference (e.g., `→ See env-003`).
-- Target: 5-15 bullet points. If it exceeds 15, prune aggressively. Discovery ID references count as items but are shorter, freeing space for fresh observations.
-- Do not repeat `config.yaml` contract values, detailed evidence tables, or full durable discovery content here. Point to the canonical file instead.
+- Promote durable cross-round knowledge to the Durable Notes section (see below). Replace promoted items with a brief reference.
+- Target: 5-15 bullet points. If it exceeds 15, prune aggressively.
+- Do not repeat `config.yaml` contract values, detailed evidence tables, or full evidence content here. Point to the canonical file instead.
 
 ### Decisions
 - Append only. Do not edit or remove past decisions.
@@ -66,6 +66,17 @@ Overwrite all fields every round. Fields must reflect the state after the round 
 - Full rewrite every round. This is not a backlog.
 - 1-3 concrete, actionable items for the next round(s).
 - If blocked, state the blocker and what is needed to unblock.
+
+### Durable Notes
+Lightweight replacement for the former discovery.md. Holds cross-round knowledge that would be costly to rediscover if pruned from Working Memory.
+
+Rules:
+- Max 10 items. Each is a one-line claim with an evidence reference (artifact path, round number, or file:line).
+- Categories: `dead-end`, `constraint`, `tool-quirk`, `code-map`. No formal IDs, status lifecycle, confidence levels, or hygiene cycles.
+- Add when a round produces knowledge that will matter in 3+ future rounds.
+- Remove when the claim is proven wrong or the underlying code/config has changed.
+- Before proposing, scan Durable Notes for dead ends and constraints. Do not re-attempt known dead ends without new evidence.
+- Do not duplicate config.yaml values, Working Memory observations, or detailed evidence here.
 
 ## Artifact Storage
 
@@ -96,15 +107,15 @@ or execution question without repeated costly reconstruction.
 | How long did a session/task take? | `state.jsonl` (derived from `session_started`/`session_ended`/`task_disposed` timestamps) |
 | What is the current session and timing coverage? | `context.md` Current State (timing anchors for quick recovery orientation) |
 | What did the user redirect or correct mid-run? | `state.jsonl` (`user_directive` events) |
-| What constraints, dead ends, quirks, and patterns persist across rounds? | `discovery.md` |
+| What constraints, dead ends, quirks persist across rounds? | `context.md` Durable Notes |
 
-`state.jsonl` records facts. `context.md` records meaning. `discovery.md` records reusable knowledge. Never duplicate across them; reference by ID or round number.
+`state.jsonl` records facts. `context.md` records meaning, reusable knowledge, and next steps. Never duplicate across them; reference by round number.
 
 Practical routing test:
 
 - contract, thresholds, boundaries, execution policy -> `config.yaml`
-- current state, blocker, next move -> `context.md`
-- durable reusable fact -> `discovery.md`
+- current state, blocker, next move -> `context.md` (Current State / Working Memory / Next Steps)
+- durable reusable fact -> `context.md` (Durable Notes)
 - raw output, logs, patches, proof -> `artifacts/`
 
 ## Recovery Protocol
@@ -116,13 +127,8 @@ On session start (fresh agent, no prior context in conversation), execute this s
 1. Resolve current task (local-first)    -> explicit task_id, <worktree_root>/.harness-task, unique branch/task_slug, sole task, <harness_root>/.harness/current-task
 2. Verify worktree state                 -> confirm session is in the task's worktree; re-enter if needed. Confirm harness root is accessible.
 3. Read task config.yaml                 -> task definition, boundaries, verification, evaluation, stop guards
-4. Read task context.md                  -> phase, progress, learnings, blockers
-4a. If discovery.md exists:
-    -> Read Snapshot and Active Index
-    -> Expand entries listed in read_first or referenced by current objective/blocker
-    -> Do NOT read full file or Archived section unless specifically needed
+4. Read task context.md                  -> phase, progress, learnings, blockers, durable notes
 5. Read task state.jsonl                 -> tail recent events, full scan if needed
-                                            -> scan for user_directive events; note any active redirections that may still apply to the current approach
 6. Read AGENTS.md                        -> protocol constraints, repo conventions
 ```
 
@@ -184,14 +190,7 @@ A fresh agent reading only `AGENTS.md` + task-scoped `.harness/` state must accu
 5. Worktree state (correct branch and path)
 6. What to do next
 
-When `discovery.md` exists, also answer:
-
-7. What hard constraints limit proposals?
-8. What approaches are known dead ends?
-9. What tool/verification quirks affect execution?
-10. What is the key module structure for this task?
-
-If questions 1-6 cannot be answered, context.md is stale or incomplete. If questions 7-10 cannot be answered but discovery.md has active entries, the Snapshot or read_first is wrong. Fix before running the next round.
+If any answer cannot be determined, context.md is stale or incomplete. Fix before running the next round.
 
 ## Failure Modes
 
@@ -202,4 +201,5 @@ If questions 1-6 cannot be answered, context.md is stale or incomplete. If quest
 | Working Memory > 15 items | Insufficient pruning | Compress or move to Decisions |
 | best_result in context.md disagrees with `state.jsonl` frontier | Missed update | Recompute from `state.jsonl` |
 | Decisions contradict Working Memory | Hypothesis promoted without cleanup | Remove from Working Memory |
+| Durable Notes > 10 items | Insufficient pruning | Remove least relevant entries |
 | `state.jsonl` is empty but the task clearly has prior history | Pre-ledger task archive or missed ledger adoption | Recover from archived artifacts, label recovered facts in `context.md`, and let the next real run record a fresh baseline |

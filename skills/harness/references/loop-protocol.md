@@ -20,7 +20,7 @@ Phase B core: the autonomous propose-verify-evaluate-record cycle.
 ### 1. Propose
 
 - Read context.md Next Steps for direction.
-- Check discovery.md Active Index and `read_first` entries before proposing. Specifically: verify the proposal does not revisit a known dead end, violate a known constraint, or ignore a known tool/environment quirk.
+- Check context.md Durable Notes before proposing. Specifically: verify the proposal does not revisit a known dead end, violate a known constraint, or ignore a known tool/environment quirk.
 - If the change is non-trivial (multi-file, architectural, or unclear path), invoke the `brainstorming` skill to explore alternatives before committing to an approach. Skip for simple, obvious changes.
 - Respect `implementation.protocol` from config:
   - `tdd_required`: before writing production code, create one minimal failing test or repro, run it, and confirm it fails for the expected reason. Then write the minimal code to pass.
@@ -81,26 +81,22 @@ Append one event to `state.jsonl` per `state-ledger.md`. Include v2 fields:
 - `agent_id`: from the controller identity established in preflight.
 - `round_started_at`: the UTC time when step 1 (Propose) began for this round. Track this in memory at the start of each round.
 
-Before writing `context.md`, `discovery.md`, or any new helper artifact, run a
+Before writing `context.md` or any new helper artifact, run a
 quick dedup routing check:
 
 1. Is this contract or threshold information? -> keep or update it only in `config.yaml`.
-2. Is this current status or next action? -> write it in `context.md`.
-3. Is this a durable reusable fact? -> write it in `discovery.md`.
+2. Is this current status or next action? -> write it in `context.md` Current State / Working Memory / Next Steps.
+3. Is this a durable reusable fact? -> write it in `context.md` Durable Notes.
 4. Is this raw proof or verbose output? -> store it in `artifacts/`.
 5. If it already has a canonical home, write a pointer instead of copying the content again.
 6. Do not create task `README.md`, `plan.md`, `design.md`, or extra reference notes during a round unless the canonical files cannot support future recovery or execution without repeated costly reconstruction.
 
 Update context.md per `context-protocol.md` update discipline:
-- Overwrite Current State (including timing anchors: `session_id`, `last_round_started`)
+- Overwrite Current State
 - Curate Working Memory
 - Rewrite Next Steps
 - Append to Decisions if a new decision was made
-
-Update discovery.md per `discovery-protocol.md` write discipline:
-- If this round produced durable knowledge (dead end, tool quirk, constraint, codebase insight, verification pattern), add or update entries. Apply the admission gate: durability, re-exploration cost, specificity.
-- If a Working Memory item was promoted to discovery.md, replace it with an ID reference in Working Memory.
-- Run per-round light hygiene: update Snapshot, update Active Index, resolve any new conflicts.
+- Update Durable Notes if this round produced cross-round knowledge (dead end, tool quirk, constraint, codebase insight)
 
 ### 6. Entropy Check
 
@@ -123,7 +119,7 @@ Before executing any doom_loop_action, invoke the `systematic-debugging` skill t
 
 | `doom_loop_action` | Behavior |
 |---|---|
-| `reread_and_pivot` | Re-read all files in `boundary.mutable`. Discard current approach. Invoke `brainstorming` skill to generate alternative strategies, then pick one. Note the pivot and reasoning in context.md Decisions. Record the failed approach as a Dead End in discovery.md with `why_failed` and `revisit_when`. |
+| `reread_and_pivot` | Re-read all files in `boundary.mutable`. Discard current approach. Invoke `brainstorming` skill to generate alternative strategies, then pick one. Note the pivot and reasoning in context.md Decisions. Record the failed approach as a dead-end in context.md Durable Notes. |
 | `codex_rescue` | Delegate diagnosis to Codex via `/codex-exec`. Construct a structured prompt using the Diagnosis recipe from `/codex-exec` `references/prompt-recipes.md`, including: failed approaches, error signatures, boundary context. Use `--sandbox workspace-write` so Codex can reproduce the failing command. Codex diagnoses only; the harness applies fixes in the next Propose step. If Codex identifies a viable fix path, record it in context.md Next Steps and continue the loop. If Codex cannot diagnose, fall back to `ask_human`. |
 | `widen_boundary` | Suggest expanding `boundary.mutable`. Requires user approval. Pause loop until approved. |
 | `ask_human` | Pause loop. Present the repeated failure pattern and ask for guidance. |
@@ -132,19 +128,13 @@ Error signature matching: normalize guard output by stripping line numbers and t
 
 #### Continue
 
+#### Continue
+
 If no stop condition fires, return to step 1 (Propose) for the next round.
 
 Do not convert a continuing loop into a user-facing stop by emitting a completion-style summary and ending the turn while non-blocked work remains. When the engine is continuing, durable task state is the progress carrier; user-facing handoff or final-status formatting belongs only to real stop conditions.
 
 If a user correction lands mid-run and it does not redirect, stop, or block the task, the controller must take the next concrete state or tool action before yielding the turn. A prose-only promise to continue is not a valid continuation.
-
-When a user correction or directive arrives mid-run, immediately append a `user_directive` event to `state.jsonl` (per `state-ledger.md`) before taking the next concrete action. Distill the core intent into `intent`, classify the behavioral impact as `effect`, and set `round` to the round the directive will be absorbed into. Then proceed with the action.
-
-#### Discovery Hygiene
-
-After stop/continue evaluation, check whether full hygiene is due per `discovery-protocol.md`:
-
-- **Every 5 rounds, session end, or session resume**: run full hygiene — check all `revisit_when` conditions, resolve `needs_recheck` entries, archive stale entries, enforce caps.
 
 ## Volatile Metric Handling
 
@@ -167,7 +157,7 @@ Each active task works on branch `<task_slug>` inside a worktree (see Worktree I
 
 Within a worktree, task resolution must not fall back to the repo-global `current-task`. If `.harness-task` or branch matching cannot resolve the task, this is a repair condition.
 
-Same-task multi-controller is not supported. Exactly one harness controller writes `state.jsonl`, `context.md`, and `discovery.md` for a given task. Embedded `/planning` implementer agents are safe because the parent controller owns all state writes.
+Same-task multi-controller is not supported. Exactly one harness controller writes `state.jsonl` and `context.md` for a given task. Embedded `/planning` implementer agents are safe because the parent controller owns all state writes.
 
 ## Session Boundary
 
@@ -175,11 +165,8 @@ When ending a session mid-loop:
 
 1. Complete the current round (do not leave a half-committed state).
 2. Append a `session_ended` event to `state.jsonl` with `reason` (`paused`, `handoff`, `budget_exhausted`, `stagnation`), current `round`, `ts`, and `agent_id`.
-3. Update context.md with full current state including timing anchors.
-4. Run full discovery hygiene per `discovery-protocol.md` (session end trigger).
-5. If mid-verify, record as `crash` and revert. Do not write `session_ended` (crash means it was not clean).
-6. Write a structured feedback note per `feedback-protocol.md`.
-7. Auto-detect: check `state.jsonl` for repeated failure signatures. Append `repeat_loop` events.
-8. Report: current round, best result, and how to resume (`/harness run`).
+3. Update context.md with full current state.
+4. If mid-verify, record as `crash` and revert. Do not write `session_ended` (crash means it was not clean).
+5. Report: current round, best result, and how to resume (`/harness run`).
 
 When the loop terminates (not mid-session), hand off to the Completion flow in `SKILL.md` for merge/keep/discard.
