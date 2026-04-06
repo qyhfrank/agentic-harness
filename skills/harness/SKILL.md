@@ -204,7 +204,7 @@ When `state.jsonl` has existing events, this is a resumed session. Follow the re
 
 When `state.jsonl` is empty but the task directory clearly preserves earlier
 work from before ledger discipline, do not treat the task as a blank fresh run.
-Follow the legacy archive recovery path in `references/context-protocol.md`:
+Follow the legacy archive recovery path in `references/recovery-protocol.md`:
 
 - recover the current state from `context.md` plus the smallest archived
   artifact set that answers the recovery questions
@@ -252,7 +252,7 @@ If the user chooses to merge:
 - **Keep**: leave the worktree intact. Report the worktree path and branch name so the user can return later.
 - **Discard**: remove the worktree through the current platform's worktree-removal flow. Confirm with the user before discarding uncommitted work. Since `.harness/` lives at the harness root (not in the worktree), task state is preserved even after worktree removal.
 
-Append a `task_disposed` event to `state.jsonl` recording the disposition (see `references/state-ledger.md`).
+Append a `task_disposed` event to `state.jsonl` recording the disposition (see `references/recovery-protocol.md`).
 
 If the session is not in a harness-created worktree (user opted out or was already in-place), skip this section entirely.
 

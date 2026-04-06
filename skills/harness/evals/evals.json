@@ -4,19 +4,25 @@
     {
       "id": "minimal-scaffold-surface",
       "prompt": "Update the harness protocol so new tasks stay lightweight by default. I want the smallest durable task surface that still supports recovery and autonomous run loops.",
-      "expected_output": "The skill keeps config.yaml, context.md, and state.jsonl as the required core, makes discovery.md and artifacts/ lazy or optional, and does not introduce README.md or plan.md as required task files.",
+      "expected_output": "The skill keeps config.yaml, context.md, and state.jsonl as the required core, makes artifacts/ lazy or optional, and does not introduce README.md or plan.md as required task files. Durable cross-round knowledge lives in context.md Durable Notes section, not a separate file.",
       "files": []
     },
     {
       "id": "no-context-duplication",
-      "prompt": "A harness task already stores thresholds and boundaries in config.yaml and durable facts in discovery.md. Strengthen the protocol so context.md does not repeat those tables or facts.",
-      "expected_output": "The skill routes thresholds and boundaries to config.yaml, durable facts to discovery.md, current state and next steps to context.md, and requires pointer-style references instead of duplicated content.",
+      "prompt": "A harness task stores thresholds and boundaries in config.yaml and durable cross-round knowledge in context.md Durable Notes. Strengthen the protocol so context.md sections do not duplicate each other or config values.",
+      "expected_output": "The skill routes thresholds and boundaries to config.yaml, durable reusable facts to context.md Durable Notes (max 10 items), current state and next steps to context.md Current State and Next Steps, and requires pointer-style references instead of duplicated content.",
       "files": []
     },
     {
       "id": "recovery-read-budget",
       "prompt": "Make recovery faster by shrinking the default files a fresh agent needs to read. I still want optional helper docs when they add value.",
-      "expected_output": "The skill keeps normal recovery on config.yaml, context.md, state.jsonl, and optional discovery.md Snapshot/read_first only. It treats README.md, plan.md, and extra references as optional helper docs, not required recovery inputs.",
+      "expected_output": "The skill keeps normal recovery on config.yaml, context.md (including Durable Notes section), and state.jsonl only. It treats README.md, plan.md, and extra references as optional helper docs, not required recovery inputs.",
+      "files": []
+    },
+    {
+      "id": "protocol-surface-ratio",
+      "prompt": "Review the harness skill for protocol surface area. The state management and bookkeeping protocols should not exceed the core propose-verify-evaluate loop in volume.",
+      "expected_output": "The skill has 3 reference files (setup, run, recovery) totaling under 700 lines. The core loop logic (propose, verify, evaluate, record, entropy check) is the dominant section in run-protocol.md. State management (context.md updates, state.jsonl schema) is compact and subordinate to the loop, not a separate subsystem.",
       "files": []
     }
   ]
