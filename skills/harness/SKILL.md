@@ -62,10 +62,6 @@ Resolve the harness root once at session start, before any mode execution:
 2. If inside a git worktree, resolve the main worktree root via `git worktree list --porcelain` (first entry)
 3. Fall back to `git rev-parse --show-toplevel` (repo root)
 
-### Workspace Heuristic
-
-After resolving, check whether the harness root's parent directory contains 2+ sibling git repos. If so, ask the user once whether to use the parent as the harness root instead (for multi-repo workspaces where several repos work closely together). Cache the answer in `.harness/config` so it is not asked again.
-
 ### Two Roots
 
 | Root | Purpose | Lifecycle |
@@ -81,25 +77,10 @@ Resolve the current task using a local-first fallback chain:
 
 1. Explicit task identifier supplied by the user or command wrapper
 2. `<worktree_root>/.harness-task` file (worktree-local affinity)
-3. Current git branch name matching a unique task slug from an existing `<task_id>`
-4. Sole task under `<harness_root>/.harness/tasks/`
-5. `<harness_root>/.harness/current-task` (root-scoped default, last resort)
+3. Sole task under `<harness_root>/.harness/tasks/`
+4. `<harness_root>/.harness/current-task` (root-scoped default, last resort; skip from inside a worktree)
 
-If inside a worktree and steps 1-3 fail to uniquely resolve a task, check whether existing tasks are present (`<harness_root>/.harness/tasks/` is non-empty). If no tasks exist yet, this is a fresh scaffold — proceed normally. If tasks exist but none could be resolved, this is a repair condition — stop and ask for an explicit task identifier. Do not continue to step 4 (sole task) or step 5 (current-task) from inside a worktree when tasks exist but local binding failed.
-
-If `.harness-task` and the branch-derived match disagree, this is also a repair condition — stop and ask for an explicit task identifier. Do not silently proceed with either value. After the user confirms the correct task, rewrite `.harness-task` to match before continuing.
-
-### Repair Flow
-
-When a repair condition is triggered:
-
-1. Stop all mode execution. Do not enter scaffold, plan, or run.
-2. Report the conflict or resolution failure to the user with concrete details (which file says what, which branch is checked out).
-3. Ask for an explicit task identifier.
-4. Verify the provided task exists under `<harness_root>/.harness/tasks/`.
-5. Rewrite `<worktree_root>/.harness-task` with the confirmed task ID (or create it if missing).
-6. Log the repair in context.md Working Memory.
-7. Resume mode detection with the now-resolved task.
+If inside a worktree and steps 1-2 fail, check whether tasks exist. No tasks = fresh scaffold. Tasks exist but no local binding = stop and ask for an explicit task identifier.
 
 If no task can be resolved, scaffold derives a task slug and task ID from the user's goal (see Task ID Generation). Scaffold writes `.harness-task` in the worktree root (if in a harness-managed worktree) and initializes `.harness/current-task` only when it does not yet exist and the new task is the sole task.
 
@@ -148,13 +129,9 @@ Otherwise auto-infer (all paths relative to harness root):
   resolved task config finalized, state.jsonl has events --> run (resume)
 ```
 
-If inside a worktree but task resolution conflicts or fails (`.harness-task` points to a non-existent task, branch matches multiple tasks, etc.) and tasks already exist, this is a repair condition — stop and ask for an explicit task identifier. Do not fall through to scaffold. If no tasks exist yet, proceed to scaffold normally.
+If inside a worktree but task resolution fails (`.harness-task` points to a non-existent task) and tasks already exist, stop and ask for an explicit task identifier. If no tasks exist yet, proceed to scaffold normally.
 
-If `state.jsonl` is empty but `context.md` or `artifacts/` clearly show the
-task predates ledger discipline, treat run entry as legacy archive recovery
-instead of a blank-slate fresh start. Follow
-`references/context-protocol.md` before preflight, and do not backfill
-historical events into `state.jsonl`.
+If `state.jsonl` is empty but `context.md` or `artifacts/` clearly show prior work, treat as legacy archive recovery per `references/recovery-protocol.md`.
 
 If auto-inferred mode is `run` but the user's message implies planning intent (asking questions about config, boundaries, verification, evaluation, or strategy), override to `plan`.
 
