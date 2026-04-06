@@ -54,6 +54,7 @@ Each child prompt must be fully self-contained (Rule 8). Common mistakes:
 | "Fix this race" (no context) | Include error message and test name |
 | No constraints (agent refactors broadly) | "Don't touch production code" / "Only modify tests" |
 | "Fix it" (vague output) | "Return root cause and change summary" |
+| Different prompts per agent in sample mode | Sample = identical prompt to all agents. Different angles/subtasks = split mode. |
 
 Agent Context Card:
 
