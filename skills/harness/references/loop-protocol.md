@@ -81,6 +81,16 @@ Append one event to `state.jsonl` per `state-ledger.md`. Include v2 fields:
 - `agent_id`: from the controller identity established in preflight.
 - `round_started_at`: the UTC time when step 1 (Propose) began for this round. Track this in memory at the start of each round.
 
+Before writing `context.md`, `discovery.md`, or any new helper artifact, run a
+quick dedup routing check:
+
+1. Is this contract or threshold information? -> keep or update it only in `config.yaml`.
+2. Is this current status or next action? -> write it in `context.md`.
+3. Is this a durable reusable fact? -> write it in `discovery.md`.
+4. Is this raw proof or verbose output? -> store it in `artifacts/`.
+5. If it already has a canonical home, write a pointer instead of copying the content again.
+6. Do not create task `README.md`, `plan.md`, `design.md`, or extra reference notes during a round unless the canonical files cannot support future recovery or execution without repeated costly reconstruction.
+
 Update context.md per `context-protocol.md` update discipline:
 - Overwrite Current State (including timing anchors: `session_id`, `last_round_started`)
 - Curate Working Memory
@@ -123,6 +133,10 @@ Error signature matching: normalize guard output by stripping line numbers and t
 #### Continue
 
 If no stop condition fires, return to step 1 (Propose) for the next round.
+
+Do not convert a continuing loop into a user-facing stop by emitting a completion-style summary and ending the turn while non-blocked work remains. When the engine is continuing, durable task state is the progress carrier; user-facing handoff or final-status formatting belongs only to real stop conditions.
+
+If a user correction lands mid-run and it does not redirect, stop, or block the task, the controller must take the next concrete state or tool action before yielding the turn. A prose-only promise to continue is not a valid continuation.
 
 #### Discovery Hygiene
 

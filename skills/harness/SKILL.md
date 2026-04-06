@@ -13,7 +13,7 @@ Three phases: **scaffold** (diagnose repo, create task-scoped `.harness/` state)
 
 ## Canonical Task Layout
 
-Harness always uses task-scoped state:
+Harness always uses task-scoped state. The minimal durable surface is:
 
 ```
 .harness/
@@ -22,9 +22,9 @@ Harness always uses task-scoped state:
     <task_id>/
       config.yaml
       context.md
-      discovery.md
       state.jsonl
-      artifacts/
+      discovery.md      # optional; create only after the first durable discovery
+      artifacts/        # optional; create lazily when a round actually emits outputs
 
 <worktree_root>/
   .harness-task         # worktree-local task affinity (single line: <task_id>)
@@ -35,6 +35,22 @@ Harness always uses task-scoped state:
 `.harness/current-task` is a root-scoped default hint, not a global active-task pointer. It answers "which task to use when no stronger local signal exists" — it does not answer "which task is this repo currently working on".
 
 Single-task usage is just the case where only one task exists. It is not a second storage layout.
+
+### Minimal Task Surface
+
+Default recovery and execution should work from the core task files alone:
+
+- `config.yaml` -> contract
+- `context.md` -> current state and next action
+- `state.jsonl` -> append-only history
+- `discovery.md` -> optional durable knowledge layer
+- `artifacts/` -> optional raw outputs and evidence
+
+Non-canonical task files such as `README.md`, `plan.md`, `design.md`, or extra
+`artifacts/reference/*.md` are optional accelerators, not part of the required
+runtime surface. Create them only when they answer a recovery or execution
+question that the canonical files cannot answer without repeated costly
+reconstruction.
 
 ## Harness Root
 
@@ -187,7 +203,7 @@ Read `references/scaffold-protocol.md` and follow it.
 
 Also read `references/feedback-protocol.md` for the feedback note step at scaffold completion.
 
-Produces: `<harness_root>/.harness/tasks/<task_id>/config.yaml`, `<harness_root>/.harness/tasks/<task_id>/context.md`, `<harness_root>/.harness/tasks/<task_id>/discovery.md`, `<harness_root>/.harness/tasks/<task_id>/state.jsonl`, `<harness_root>/.harness/tasks/<task_id>/artifacts/`, `<worktree_root>/.harness-task` (if in a harness-managed worktree), and an `AGENTS.md` update. Initializes `<harness_root>/.harness/current-task` only when it does not yet exist and this is the sole task.
+Produces: `<harness_root>/.harness/tasks/<task_id>/config.yaml`, `<harness_root>/.harness/tasks/<task_id>/context.md`, `<harness_root>/.harness/tasks/<task_id>/state.jsonl`, and `<worktree_root>/.harness-task` (if in a harness-managed worktree). `discovery.md` and `artifacts/` are created lazily when first needed. Also updates `AGENTS.md`. Initializes `<harness_root>/.harness/current-task` only when it does not yet exist and this is the sole task.
 
 Idempotent: re-running scaffold only fills gaps, never overwrites existing files.
 
@@ -240,6 +256,15 @@ Follow the legacy archive recovery path in `references/context-protocol.md`:
 ### Fresh Start
 
 Run preflight checks first. On pass, enter the loop defined in `references/loop-protocol.md`.
+
+### Caffeine Overlay Semantics
+
+When `caffeine` wraps `harness`, ordinary rounds stay silent unless a true blocker appears.
+
+- `state.jsonl`, `context.md`, `discovery.md`, and task artifacts are the in-progress checkpoint surface.
+- A user-facing `Wake-Up Handoff` belongs only to real stop conditions: `complete`, budget exhaustion, stagnation, explicit pause, session end, or a hard blocker.
+- Do not treat a successful `keep` round as a reason to stop or summarize to the user in handoff format while the task still has non-blocked work remaining.
+- If the user sends a sideband correction during run (for example, "keep going" or "you stopped too early"), absorb it through the loop owner state and take the next concrete run action in the same turn rather than ending on a prose-only acknowledgement.
 
 ## Completion
 
