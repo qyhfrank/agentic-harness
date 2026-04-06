@@ -95,6 +95,7 @@ or execution question without repeated costly reconstruction.
 | When did round N happen? | `state.jsonl` (`ts`, `round_started_at`) |
 | How long did a session/task take? | `state.jsonl` (derived from `session_started`/`session_ended`/`task_disposed` timestamps) |
 | What is the current session and timing coverage? | `context.md` Current State (timing anchors for quick recovery orientation) |
+| What did the user redirect or correct mid-run? | `state.jsonl` (`user_directive` events) |
 | What constraints, dead ends, quirks, and patterns persist across rounds? | `discovery.md` |
 
 `state.jsonl` records facts. `context.md` records meaning. `discovery.md` records reusable knowledge. Never duplicate across them; reference by ID or round number.
@@ -121,6 +122,7 @@ On session start (fresh agent, no prior context in conversation), execute this s
     -> Expand entries listed in read_first or referenced by current objective/blocker
     -> Do NOT read full file or Archived section unless specifically needed
 5. Read task state.jsonl                 -> tail recent events, full scan if needed
+                                            -> scan for user_directive events; note any active redirections that may still apply to the current approach
 6. Read AGENTS.md                        -> protocol constraints, repo conventions
 ```
 

@@ -138,6 +138,8 @@ Do not convert a continuing loop into a user-facing stop by emitting a completio
 
 If a user correction lands mid-run and it does not redirect, stop, or block the task, the controller must take the next concrete state or tool action before yielding the turn. A prose-only promise to continue is not a valid continuation.
 
+When a user correction or directive arrives mid-run, immediately append a `user_directive` event to `state.jsonl` (per `state-ledger.md`) before taking the next concrete action. Distill the core intent into `intent`, classify the behavioral impact as `effect`, and set `round` to the round the directive will be absorbed into. Then proceed with the action.
+
 #### Discovery Hygiene
 
 After stop/continue evaluation, check whether full hygiene is due per `discovery-protocol.md`:

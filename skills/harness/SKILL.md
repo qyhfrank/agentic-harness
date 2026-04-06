@@ -264,7 +264,7 @@ When `caffeine` wraps `harness`, ordinary rounds stay silent unless a true block
 - `state.jsonl`, `context.md`, `discovery.md`, and task artifacts are the in-progress checkpoint surface.
 - A user-facing `Wake-Up Handoff` belongs only to real stop conditions: `complete`, budget exhaustion, stagnation, explicit pause, session end, or a hard blocker.
 - Do not treat a successful `keep` round as a reason to stop or summarize to the user in handoff format while the task still has non-blocked work remaining.
-- If the user sends a sideband correction during run (for example, "keep going" or "you stopped too early"), absorb it through the loop owner state and take the next concrete run action in the same turn rather than ending on a prose-only acknowledgement.
+- If the user sends a sideband correction during run (for example, "keep going" or "you stopped too early"), record a `user_directive` event to `state.jsonl` (per `state-ledger.md`), then absorb it through the loop owner state and take the next concrete run action in the same turn rather than ending on a prose-only acknowledgement.
 
 ## Completion
 

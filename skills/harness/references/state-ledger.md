@@ -163,6 +163,31 @@ Written once when the Completion flow resolves the task's worktree.
 
 `disposition` values: `merged`, `kept`, `discarded`.
 
+### User Directive Event
+
+Written when a user sends a mid-run correction, redirection, or instruction during the autonomous loop. Captures the core intent so recovering agents can see which rounds were user-influenced.
+
+```json
+{
+  "schema_version": 2,
+  "event": "user_directive",
+  "task_id": "000-fix-auth-timeout",
+  "session_id": "harness-run-20260402-a1b2",
+  "agent_id": "harness-controller-a1b2",
+  "ts": "2026-04-02T09:12:30Z",
+  "round": 5,
+  "intent": "stop optimizing latency, focus on correctness first",
+  "effect": "redirect",
+  "summary": "user redirected focus from latency to correctness before round 5"
+}
+```
+
+`effect` values: `redirect` (change approach or goal), `continue` (resume or keep going), `pause` (user-initiated stop), `refine` (narrow or adjust within current approach), `escalate` (user flags an issue for the controller to address).
+
+`round` is the round the directive will be absorbed into. If the directive arrives between rounds, use the next round number.
+
+`intent` is a one-sentence distillation of the user's core meaning, not a verbatim transcript. When the distillation would lose critical detail, include the key phrase in the optional `verbatim_excerpt` field.
+
 ## Required Fields
 
 ### v2 Common Envelope (all events)
@@ -192,6 +217,8 @@ Written once when the Completion flow resolves the task's worktree.
 | `evaluation.result` | `baseline_recorded`, `round_completed` | `baseline`, `keep`, `discard`, `crash`, `no_op`, `hook_blocked`, `needs_escalation`, `complete`. |
 | `reason` | `session_started`, `session_ended` | Why the session started or ended. |
 | `disposition` | `task_disposed` | `merged`, `kept`, `discarded`. |
+| `intent` | `user_directive` | One-sentence distillation of the user's core meaning. |
+| `effect` | `user_directive` | `redirect`, `continue`, `pause`, `refine`, `escalate`. |
 
 ## Optional Fields
 
@@ -209,6 +236,7 @@ Written once when the Completion flow resolves the task's worktree.
 | `branch` | any | Git branch name. |
 | `environment_fingerprint` | any | Environment identifier. |
 | `agent_id` | any | Controller provenance. Format: `harness-controller-<shortid>`. See v2 Optional Provenance. |
+| `verbatim_excerpt` | `user_directive` | Short verbatim quote when the distilled `intent` would lose critical detail. |
 
 ## Session ID Format
 
@@ -243,6 +271,7 @@ All paths below use `<harness_root>` as the resolved harness root path (see SKIL
 | Escalations | `jq -c 'select(.verification.status == "needs_escalation" or .evaluation.result == "needs_escalation")' <harness_root>/.harness/tasks/<task_id>/state.jsonl` |
 | Session events | `jq -c 'select(.event == "session_started" or .event == "session_ended")' <harness_root>/.harness/tasks/<task_id>/state.jsonl` |
 | Round timing | `jq -c 'select(.event == "round_completed") | {round, ts, round_started_at}' <harness_root>/.harness/tasks/<task_id>/state.jsonl` |
+| User directives | `jq -c 'select(.event == "user_directive")' <harness_root>/.harness/tasks/<task_id>/state.jsonl` |
 
 ## Backward Compatibility
 
