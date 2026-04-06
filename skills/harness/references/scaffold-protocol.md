@@ -64,9 +64,9 @@ All paths below are at the resolved harness root.
         └── <task_id>/
             ├── config.yaml      # draft config
             ├── context.md       # initial context
-            ├── discovery.md     # empty; populated during run phase
             ├── state.jsonl      # empty; baseline event added during preflight
-            └── artifacts/       # empty, for future round outputs
+            ├── discovery.md     # optional; create only after first durable discovery
+            └── artifacts/       # optional; create lazily when a round emits outputs
 
 <worktree_root>/
 └── .harness-task             # worktree-local task affinity (written when in a harness-managed worktree)
@@ -208,9 +208,14 @@ Leave everything else empty with `# fill during plan` comments when helpful.
 
 Create an empty file. Do not write a header row. The baseline event is created during preflight (run phase).
 
-### 7a. Generate discovery.md
+### 7a. discovery.md Is Lazy
 
-Create with the empty template:
+Do not create `discovery.md` during scaffold.
+
+Create it only when the run phase first promotes durable knowledge out of
+`context.md` Working Memory per `discovery-protocol.md`.
+
+When first created, use this empty template:
 
 ```markdown
 # Task Discoveries
@@ -239,8 +244,6 @@ Create with the empty template:
 (empty)
 ```
 
-This file is populated during the run phase per `discovery-protocol.md`. Do not pre-fill entries during scaffold.
-
 ### 8. Update AGENTS.md
 
 Append a harness section to the project's AGENTS.md (create if missing):
@@ -257,8 +260,8 @@ Harness state lives at the **harness root** (original repo root), not inside wor
 - Task configs: `<harness_root>/.harness/tasks/<task_id>/config.yaml`
 - Task state: `<harness_root>/.harness/tasks/<task_id>/state.jsonl`
 - Task context: `<harness_root>/.harness/tasks/<task_id>/context.md`
-- Task discoveries: `<harness_root>/.harness/tasks/<task_id>/discovery.md`
-- Task artifacts: `<harness_root>/.harness/tasks/<task_id>/artifacts/`
+- Task discoveries (optional): `<harness_root>/.harness/tasks/<task_id>/discovery.md`
+- Task artifacts (optional): `<harness_root>/.harness/tasks/<task_id>/artifacts/`
 
 Multi-task concurrency: one task per worktree, one controller per task. `.harness-task` binds a worktree to its task. Child implementers (dispatched by `/planning`) do not write `.harness/` state.
 

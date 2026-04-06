@@ -6,7 +6,7 @@ Maintenance rules for `.harness/tasks/<task_id>/discovery.md` — the durable kn
 
 Working Memory in `context.md` is capped at 15 items and aggressively pruned. Knowledge that is valuable across 3+ rounds or across sessions — dead ends, tool quirks, environment constraints, codebase structure — gets compressed or lost, leading to re-exploration and wasted rounds.
 
-`discovery.md` holds **curated current truth**: cross-round reusable knowledge with scope, evidence, and staleness rules. It is not a log, not a backlog, and not a second Decisions section.
+`discovery.md` holds **curated current truth**: cross-round reusable knowledge with scope, evidence, and staleness rules. It is not a log, not a backlog, not a second Decisions section, and not a second copy of current state or config.
 
 See the Division of Labor table in `context-protocol.md` for how `discovery.md` fits alongside `state.jsonl` and `context.md`.
 
@@ -151,6 +151,9 @@ Discovery entries are written **only during the RECORD step** of the round lifec
 - Decisions about approach (goes to Decisions section in context.md)
 - Metric values and round outcomes (goes to state.jsonl)
 - Protocol-level feedback about harness itself (goes to feedback-note.json)
+- Current-state echoes such as "worktree is clean", "state.jsonl is empty", or "current task pointer matches" (belongs in `context.md` Current State if needed)
+- Config echoes such as thresholds, immutable boundaries, or canonical command lists that already live in `config.yaml`
+- Full evidence tables or long numeric summaries that belong in `artifacts/` or a single evidence note
 
 ## Curation Rules
 
@@ -163,6 +166,7 @@ After writing any new entries:
 3. If a new entry contradicts an existing one, apply the Conflict Resolution rules below.
 4. If Working Memory contains items that were just promoted to discovery, replace with a reference: `See dead-002` instead of repeating the full claim.
 5. If a discovery entry is archived and Working Memory still references it, remove the reference.
+6. Remove or shrink any entry that merely repeats current-state fields, config values, or detailed evidence that already has a canonical home.
 
 ### Periodic Full Hygiene (every 5 rounds, session end, session resume)
 
@@ -260,6 +264,7 @@ Active Index always lists all active entries (one line per entry). When active e
 | Active count > hard cap | Insufficient pruning | Force archive lowest-impact entries |
 | Entry claim stale but status still `active` | Missed hygiene cycle | Run full hygiene, check `revisit_when` |
 | Working Memory duplicates discovery content | Failed promotion discipline | Replace duplicates with ID references |
+| discovery.md repeats config or current-state fields | Boundary confusion | Keep contract in config, current state in context, durable fact in discovery |
 | Recovery cannot answer questions 7-10 | Snapshot stale or read_first wrong | Rebuild Snapshot from active entries |
 | Same knowledge in discovery.md and Decisions | Boundary confusion | Discovery = reusable fact, Decision = committed choice. Deduplicate. |
 | Incorrect entry blocks valid approach | Missing `revisit_when` check | Mark `needs_recheck` when conditions change, do not trust blindly |

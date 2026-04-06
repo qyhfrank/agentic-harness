@@ -1,6 +1,6 @@
 ---
 name: critique
-description: Use when code changes need structured review with anchored findings, including spec compliance gates, code quality gates, plan/config review, or full multi-angle reviews. Triggers on /critique, "review this", "code review", "quality check", "spec compliance check", "review the plan", "review the config", "find blocking issues".
+description: 'Use when code, plan, or config changes need structured review with source-anchored findings, such as spec checks, quality gates, plan review, or final multi-angle review. Triggers on /critique, "review this", "code review", "review the plan", "review the config", or "find blocking issues"; do not use to respond to existing review feedback after comments arrive.'
 argument-hint: <what to review> [--spec|--quality|--plan|--adversarial] [-a thinker|doer|codex|opus] [--refactor] [--model <name>] [--effort <level>]
 ---
 

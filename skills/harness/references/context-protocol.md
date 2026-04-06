@@ -55,6 +55,7 @@ Overwrite all fields every round. Fields must reflect the state after the round 
 - Move settled observations to Decisions when they become committed choices.
 - Promote durable cross-round knowledge to `discovery.md` per `discovery-protocol.md`. Replace promoted items with an ID reference (e.g., `→ See env-003`).
 - Target: 5-15 bullet points. If it exceeds 15, prune aggressively. Discovery ID references count as items but are shorter, freeing space for fresh observations.
+- Do not repeat `config.yaml` contract values, detailed evidence tables, or full durable discovery content here. Point to the canonical file instead.
 
 ### Decisions
 - Append only. Do not edit or remove past decisions.
@@ -76,6 +77,11 @@ Every round's verification output goes to `<harness_root>/.harness/tasks/<task_i
 
 Do not store artifacts inline in context.md. Reference by path.
 
+Non-canonical helper files such as task `README.md`, `plan.md`, `design.md`, or
+extra reference notes are optional. They must not become required for normal
+recovery. Create them only when the canonical files cannot answer the recovery
+or execution question without repeated costly reconstruction.
+
 ## Division of Labor
 
 | Question | Answer from |
@@ -92,6 +98,13 @@ Do not store artifacts inline in context.md. Reference by path.
 | What constraints, dead ends, quirks, and patterns persist across rounds? | `discovery.md` |
 
 `state.jsonl` records facts. `context.md` records meaning. `discovery.md` records reusable knowledge. Never duplicate across them; reference by ID or round number.
+
+Practical routing test:
+
+- contract, thresholds, boundaries, execution policy -> `config.yaml`
+- current state, blocker, next move -> `context.md`
+- durable reusable fact -> `discovery.md`
+- raw output, logs, patches, proof -> `artifacts/`
 
 ## Recovery Protocol
 
@@ -110,6 +123,10 @@ On session start (fresh agent, no prior context in conversation), execute this s
 5. Read task state.jsonl                 -> tail recent events, full scan if needed
 6. Read AGENTS.md                        -> protocol constraints, repo conventions
 ```
+
+Do not read `README.md`, `plan.md`, `design.md`, or extra reference notes during
+normal recovery unless steps 3-6 still leave one of the required recovery
+answers missing.
 
 Conflict rules for step 1:
 - If `.harness-task` and branch-derived match disagree, this is a repair condition — stop and ask for an explicit task identifier. Do not proceed with either value. After the user confirms, rewrite `.harness-task` before continuing.

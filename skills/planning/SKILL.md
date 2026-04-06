@@ -1,6 +1,6 @@
 ---
 name: planning
-description: Use when executing an implementation plan task-by-task with staged /critique review gates via foreground child contexts. Triggers on /planning, "execute this plan", "run the plan", or when a plan/task list is ready for structured execution.
+description: 'Use when an implementation plan or task list is already written and needs to be executed step by step with review gates between tasks. Triggers on /planning, "execute this plan", "run the plan", or "work through these tasks in order"; do not use to create the plan or to run a broader autonomous harness loop.'
 user_invocable: true
 argument-hint: <plan-path or inline task list>
 ---

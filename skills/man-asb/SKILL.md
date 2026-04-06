@@ -1,13 +1,6 @@
 ---
 name: man-asb
-description: >
-  Agent Switchboard (ASB) usage guide covering CLI commands, configuration files (config.toml,
-  .asb.toml, mcp.json), library entry formats (rules, commands, agents, skills, hooks), plugin
-  system, and distribution targets. Use when the user asks about ASB configuration, wants to
-  write or debug ASB config files, manage MCP servers/rules/commands/agents/skills/hooks via ASB,
-  set up plugins, or understand how ASB distributes to different AI coding agents. Trigger on
-  mentions of "asb", "agent-switchboard", "config.toml" (in ASB context), ".asb.toml",
-  "asb sync", "asb mcp", "asb rule", "asb plugin", or any ASB CLI subcommand.
+description: 'Use when the user needs help with Agent Switchboard configuration, sync behavior, plugins, MCP integration through ASB, or distribution to supported coding agents. Triggers on "asb", "agent-switchboard", ".asb.toml", "asb sync", "asb plugin", "asb mcp", or other ASB CLI commands; do not use for general MCP server design outside ASB.  "asb sync", "asb mcp", "asb rule", "asb plugin", or any ASB CLI subcommand.'
 ---
 
 # Agent Switchboard (ASB) Guide

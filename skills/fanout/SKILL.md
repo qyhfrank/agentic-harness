@@ -1,6 +1,6 @@
 ---
 name: fanout
-description: Use when multiple perspectives on the same question improve quality, or when lightweight parallel dispatch to independent subtasks is needed. Triggers on /fanout, "fan out", "parallel agents", "split across agents", "get multiple opinions", "sample N agents".
+description: 'Use when independent subtasks can be split across agents, or when the same question benefits from several independent perspectives. Triggers on /fanout, "fan out", "parallel agents", "split this across agents", "get multiple opinions", or "sample N agents"; do not use for structured review gates (/critique) or large worktree/PR batch changes (/batch).'
 user_invocable: true
 argument-hint: <task> [-m split|sample] [-a <type>[:<count>]]... [-b] [--model <name>] [--effort <level>]
 ---
