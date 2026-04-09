@@ -24,5 +24,6 @@ Foreground child context:
 - Are units decomposed so they can be understood and tested independently?
 - Is the implementation following the file structure from the plan?
 - Did this implementation create new files that are already large, or significantly grow existing files?
+- Is the implementation appropriately simple for its scope, or does it introduce structure (abstractions, indirection, extension points) that no current consumer needs?
 
 **Output:** Findings in F-NNN format with verdict envelope (see `code-reviewer.md`).

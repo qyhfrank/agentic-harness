@@ -39,6 +39,8 @@ git diff {BASE_SHA}..{HEAD_SHA}
   - Unplanned scope expansion (async paths, dp_size>1, diffusion bucketing, etc.)
   - Config bridging that confuses ownership (rollout policy written back to engine cfg)
 
+Suppress findings that recommend adding abstractions, safety mechanisms, or structural patterns beyond what current code paths and current consumers require. A proposed fix that adds more complexity than the risk it addresses is itself over-designed — do not report it.
+
 ## Output Format
 
 ```markdown

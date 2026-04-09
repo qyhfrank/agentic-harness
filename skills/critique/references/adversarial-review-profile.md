@@ -29,6 +29,8 @@ If the user supplied a focus area, weight it heavily, but still report any other
 
 Report only material findings. Do not include style feedback, naming feedback, low-value cleanup, or speculative concerns without evidence. Prefer one strong finding over several weak ones. If the change looks safe, say so directly and return no findings.
 
+A missing safety mechanism is material only when the failure mode is reachable from current code paths and usage patterns, not from hypothetical future scenarios. Do not recommend adding defensive patterns whose complexity cost exceeds the realistic risk they mitigate.
+
 Each finding must answer:
 
 1. What can go wrong?

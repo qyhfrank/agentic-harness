@@ -180,6 +180,8 @@ Default to `near-blocking` for these signals; upgrade to `blocking` only with pr
 
 These findings must also: state concrete facts (no vague "over-engineering" labels), describe the trigger path or consumer relationship in current implementation, and propose the minimal safe fix.
 
+Suppress findings that recommend adding abstractions, safety mechanisms, or structural patterns beyond what current code paths and current consumers require.
+
 ## Execution
 
 ### Single Engine (--spec, --quality, --plan, --adversarial)
