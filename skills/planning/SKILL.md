@@ -20,14 +20,14 @@ Plan creation is handled by native plan mode or `/critique --plan` for review. T
 | **Standalone** | User or `/caffeine` calls directly | Drives task loop + runs `/critique` gates + owns ledger | N/A |
 | **Embedded** | `/harness` delegates during run phase | Parses plan + dispatches implementer per task | Drives round loop, runs verification gates, owns state + final review |
 
-**Standalone**: planning owns the full lifecycle — task sequencing, implementer dispatch, `/critique --quality` (includes spec compliance), and its own ledger.
+**Standalone**: planning owns the full lifecycle — task sequencing, implementer dispatch, `/critique` review gates, and its own ledger.
 
 **Embedded**: planning is a plan adapter + implementer dispatcher only. Harness drives one round per task:
 
 ```
 harness round N (for task N):
   propose:  planning dispatches implementer
-  verify:   harness runs verification gate (/critique --quality)
+  verify:   harness runs verification gate (/critique)
   evaluate: harness decides keep/discard
   record:   harness writes state.jsonl
 ```
@@ -49,7 +49,7 @@ When a task involves mocks, test doubles, or test-only seams, read `references/t
 ### Standalone
 
 - Implementer and review gates are all foreground child contexts, consumed sequentially.
-- Quality review goes through `/critique --quality` (includes spec compliance).
+- Review goes through `/critique`.
 - Orchestration stays in controller. Child workers do not invoke `/fanout` or `/critique`.
 
 ### Embedded (in /harness)
@@ -77,8 +77,8 @@ digraph process {
         "Questions?" [shape=diamond];
         "Answer, re-launch" [shape=box];
         "Implementer implements, tests, commits" [shape=box];
-        "/critique --quality" [shape=box];
-        "Quality pass?" [shape=diamond];
+        "/critique" [shape=box];
+        "Review pass?" [shape=diamond];
         "Fix issues" [shape=box];
         "Mark task complete" [shape=box];
     }
@@ -90,11 +90,11 @@ digraph process {
     "Questions?" -> "Answer, re-launch" [label="yes"];
     "Answer, re-launch" -> "Launch implementer (./implementer-prompt.md)";
     "Questions?" -> "Implementer implements, tests, commits" [label="no"];
-    "Implementer implements, tests, commits" -> "/critique --quality";
-    "/critique --quality" -> "Quality pass?";
-    "Quality pass?" -> "Fix issues" [label="fail"];
-    "Fix issues" -> "/critique --quality" [label="re-review"];
-    "Quality pass?" -> "Mark task complete" [label="pass"];
+    "Implementer implements, tests, commits" -> "/critique";
+    "/critique" -> "Review pass?";
+    "Review pass?" -> "Fix issues" [label="fail"];
+    "Fix issues" -> "/critique" [label="re-review"];
+    "Review pass?" -> "Mark task complete" [label="pass"];
     "Mark task complete" -> "More tasks?";
     "More tasks?" -> "Launch implementer (./implementer-prompt.md)" [label="yes"];
     "More tasks?" -> "Done" [label="no"];
@@ -131,7 +131,7 @@ Field semantics:
 
 ## Handling Implementer Status
 
-**DONE:** Standalone: enter `/critique --quality`. Embedded: return to harness for verification gates.
+**DONE:** Standalone: enter `/critique`. Embedded: return to harness for verification gates.
 
 **DONE_WITH_CONCERNS:** Implementation complete with doubts. Read concerns: correctness/scope issues -> address before review; observational notes -> record and continue to review.
 
@@ -204,7 +204,7 @@ Child context fails: launch new child context to fix. Do not fix manually (conte
 ## Integration
 
 Required workflow skills:
-- `/critique` -- review gates (quality, plan profiles)
+- `/critique` -- review gates
 
 Related skills:
 - `superpowers:brainstorming` -- design exploration before planning

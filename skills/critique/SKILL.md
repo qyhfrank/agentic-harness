@@ -1,20 +1,19 @@
 ---
 name: critique
 description: 'Use when code, plan, or config changes need structured review with source-anchored findings. Triggers on /critique, "review this", "code review", "review the plan", "review the config", or "find blocking issues"; do not use to respond to existing review feedback after comments arrive.'
-argument-hint: <what to review> [--quality|--plan]
+argument-hint: <what to review>
 ---
 
 Arguments: $ARGUMENTS
 
 # Critique
 
-Structured review with source-anchored findings.
+Structured review with source-anchored findings. Detect what is being reviewed and apply the appropriate checklist.
 
-## Profiles
+## Input Detection
 
-- No flag (default): Multi-angle review — load `/fanout`, dispatch multiple reviewers with dynamically generated roles and focus angles using the quality review checklist.
-- `--quality`: Single reviewer, quality + spec compliance.
-- `--plan`: Single reviewer, plan/config artifact.
+- Code changes (git diff, implementation) → Code Review Checklist
+- Plan documents, task lists, harness config.yaml → Plan Review Checklist
 
 ## Verdict Envelope
 
@@ -27,8 +26,6 @@ Structured review with source-anchored findings.
 - `pass`: no blocking findings.
 - `fail`: blocking findings exist, must address.
 - `needs_escalation`: cannot determine, needs broader context or human judgment.
-
-Single-reviewer verdicts are gate inputs, not completion oracles — inside `/harness`, a pass contributes to `review_streak` but does not satisfy `close_rule` on its own.
 
 ## Finding Format
 
@@ -45,9 +42,7 @@ Single-reviewer verdicts are gate inputs, not completion oracles — inside `/ha
 
 Severity: `blocking` (must fix), `near-blocking` (should fix). `non-blocking` only when user explicitly requests.
 
-## Quality Review Checklist
-
-Spawn a single reviewer child context with the git range (`BASE_SHA..HEAD_SHA`), implementation description, and plan/requirements reference.
+## Code Review Checklist
 
 **Phase 1 — Spec compliance.** Do NOT trust the implementer's report. Read the actual code and verify:
 
@@ -67,8 +62,6 @@ If spec compliance fails, stop and return `fail`.
 
 ## Plan Review Checklist
 
-Spawn a single reviewer child context with the planning artifact and goal/spec reference.
-
 **For plan documents:** completeness (no TODOs/placeholders), goal alignment (no scope creep), task decomposition (atomic, clear boundaries), dependency ordering, file scope (no overlapping writes), verification (each task has testable acceptance criteria).
 
 **For harness config.yaml:** boundary completeness (mutable/immutable paths cover scope), checks have runnable commands, acceptance criteria are concrete, budget/stagnation limits are reasonable.
@@ -81,17 +74,8 @@ Spawn a single reviewer child context with the planning artifact and goal/spec r
 
 ## Execution
 
-### Single Reviewer (--quality, --plan)
-
-1. Spawn single reviewer child context with the profile's checklist.
-2. Collect verdict envelope.
-3. Verify finding anchors point to real source locations.
-4. Return verdict.
-
-### Multi-Angle (default, no flag)
-
-1. Load `/fanout`, dispatch reviewers with `-m sample`.
-2. Dynamically generate reviewer roles and focus angles based on the diff.
+1. Detect review target (code vs plan).
+2. Load `/fanout`, dispatch multiple reviewers with dynamically generated roles and focus angles using the appropriate checklist.
 3. Collect outputs, critically merge findings.
 4. Source-verify all blocking findings.
 5. Return verdict envelope.
