@@ -11,10 +11,10 @@ The autonomous propose-verify-evaluate-record cycle, plus checks model and evalu
 ## Single Round Lifecycle
 
 ```
-1. PROPOSE  -->  2. COMMIT  -->  3. VERIFY  -->  4. EVALUATE  -->  5. RECORD  -->  6. ENTROPY CHECK
-     ^                                                                                             |
-     |_____________________________________________________________________________________________|
-                                                   continue
+1. PROPOSE  -->  2. SIMPLIFY  -->  3. COMMIT  -->  4. VERIFY  -->  5. EVALUATE  -->  6. RECORD  -->  7. ENTROPY CHECK
+     ^                                                                                                              |
+     |______________________________________________________________________________________________________________|
+                                                           continue
 ```
 
 ### 1. Propose
@@ -30,13 +30,20 @@ The autonomous propose-verify-evaluate-record cycle, plus checks model and evalu
 - Enforce `execution_policy` from config: do not run commands matching `dangerous_commands` without human approval, never read or stage files matching `secret_patterns`, respect `network_policy` and `dependency_install` settings.
 - Apply `atomicity_test`: if the change description needs "and", split into separate rounds.
 
-### 2. Commit
+### 2. Simplify
+
+- Skip when the change is single-file and trivial (< ~20 lines changed).
+- Invoke `/simplify` on the proposed changes before committing. `/simplify` edits code in-place (reuse, simplicity, efficiency lenses).
+- Re-read the diff after `/simplify` runs. The combined diff (propose + simplify) is what gets committed.
+- If `/simplify` produces no changes, proceed to Commit.
+
+### 3. Commit
 
 - Stage only files within `boundary.mutable`.
 - Commit with message: `harness(round-{N}): <description>`
 - If pre-commit hook blocks: record `reverted` (reason: `hook_blocked`), move to Record.
 
-### 3. Verify
+### 4. Verify
 
 Read `checks[]` from config.yaml. Partition into:
 
@@ -48,17 +55,17 @@ expensive = checks where cost == "expensive"
 
 Execute in order:
 
-**3a. Cheap checks** -- Run each cheap command in list order. Record per-gate verdict in `verification.gates`. On first fail: short-circuit, aggregate status = `fail`, skip 3b/3c.
+**4a. Cheap checks** -- Run each cheap command in list order. Record per-gate verdict in `verification.gates`. On first fail: short-circuit, aggregate status = `fail`, skip 4b/4c.
 
-**3b. Review gate** (if configured) -- Invoke `/critique` with appropriate profile. Record verdict in `verification.gates`. On fail: aggregate status = `fail`, skip 3c. On `needs_escalation`: aggregate status = `blocked`, skip 3c. On pass: increment `review_streak` counter.
+**4b. Review gate** (if configured) -- Invoke `/critique` with appropriate profile. Record verdict in `verification.gates`. On fail: aggregate status = `fail`, skip 4c. On `needs_escalation`: aggregate status = `blocked`, skip 4c. On pass: increment `review_streak` counter.
 
-**3c. Expensive checks** (when applicable) -- Run expensive checks only when:
+**4c. Expensive checks** (when applicable) -- Run expensive checks only when:
 - This is a close attempt (`close_rule` requires them and objective appears met), OR
 - Round number hits `evaluation.expensive_interval` (default 10).
 
 Record per-gate verdict. On first fail: short-circuit, aggregate status = `fail`.
 
-**3d. Human review** (if `close_rule` includes `human_required`) -- Queue for human review. Proceed to Evaluate with current state.
+**4d. Human review** (if `close_rule` includes `human_required`) -- Queue for human review. Proceed to Evaluate with current state.
 
 Capture full stdout/stderr to `artifacts/round-{N}/`.
 
@@ -86,13 +93,13 @@ Aggregate `verification.status`:
 
 When expensive checks are skipped in a round, their names do not appear in `verification.gates`. They were not applicable, not skipped.
 
-### 4. Evaluate
+### 5. Evaluate
 
 Apply the Decision Rules (see Evaluation Rules below).
 
 After revert (`reverted`): verify the revert itself does not break baseline.
 
-### 5. Record
+### 6. Record
 
 Append one event to `state.jsonl`. Required fields: `event`, `task_id`, `ts`, `round`, `commit`, `verification.status`, `verification.gates`, `verification.review_streak`, `evaluation.result`, `evaluation.reason` (when `reverted` or `blocked`), `summary`.
 
@@ -109,7 +116,7 @@ Update context.md:
 - Append to Decisions if a new decision was made
 - Update Durable Notes if this round produced cross-round knowledge
 
-### 6. Entropy Check
+### 7. Entropy Check
 
 #### Stop Conditions (check in order)
 
@@ -138,11 +145,11 @@ Do not stop on a successful round while non-blocked work remains.
 
 ## Checks Model
 
-Every entry in `checks[]` has exactly one classification: `cost: cheap`, `cost: expensive`, or `kind: review`. A check must not have both `cost` and `kind`. Execution order: cheap (3a) → review (3b) → expensive (3c).
+Every entry in `checks[]` has exactly one classification: `cost: cheap`, `cost: expensive`, or `kind: review`. A check must not have both `cost` and `kind`. Execution order: cheap (4a) → review (4b) → expensive (4c).
 
 ### Probe Checks (optional)
 
-A `probe` is a cheap, task-specific command check that answers "did this specific change help?" Mark with `probe: true`. Runs alongside cheap checks in step 3a. Probe failure is informational in `satisfy` mode and does not force revert. To make a probe mandatory, configure it as a regular cheap check instead.
+A `probe` is a cheap, task-specific command check that answers "did this specific change help?" Mark with `probe: true`. Runs alongside cheap checks in step 4a. Probe failure is informational in `satisfy` mode and does not force revert. To make a probe mandatory, configure it as a regular cheap check instead.
 
 When `objective: optimize` and no probe exists, note the gap in context.md Working Memory.
 
