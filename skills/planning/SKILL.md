@@ -20,7 +20,7 @@ Plan creation is handled by native plan mode or `/critique --plan` for review. T
 | **Standalone** | User or `/caffeine` calls directly | Drives task loop + runs `/critique` gates + owns ledger | N/A |
 | **Embedded** | `/harness` delegates during run phase | Parses plan + dispatches implementer per task | Drives round loop, runs verification gates, owns state + final review |
 
-**Standalone**: planning owns the full lifecycle — task sequencing, implementer dispatch, `/critique --quality` (includes spec compliance), final `/critique` (full), and its own ledger.
+**Standalone**: planning owns the full lifecycle — task sequencing, implementer dispatch, `/critique --quality` (includes spec compliance), and its own ledger.
 
 **Embedded**: planning is a plan adapter + implementer dispatcher only. Harness drives one round per task:
 
@@ -84,7 +84,6 @@ digraph process {
     }
     "Normalize input into task manifest" [shape=box];
     "More tasks?" [shape=diamond];
-    "Final /critique (standalone only)" [shape=box];
     "Done" [shape=box style=filled fillcolor=lightgreen];
     "Normalize input into task manifest" -> "Launch implementer (./implementer-prompt.md)";
     "Launch implementer (./implementer-prompt.md)" -> "Questions?";
@@ -98,8 +97,7 @@ digraph process {
     "Quality pass?" -> "Mark task complete" [label="pass"];
     "Mark task complete" -> "More tasks?";
     "More tasks?" -> "Launch implementer (./implementer-prompt.md)" [label="yes"];
-    "More tasks?" -> "Final /critique (standalone only)" [label="no"];
-    "Final /critique (standalone only)" -> "Done";
+    "More tasks?" -> "Done" [label="no"];
 }
 ```
 
@@ -206,7 +204,7 @@ Child context fails: launch new child context to fix. Do not fix manually (conte
 ## Integration
 
 Required workflow skills:
-- `/critique` -- review gates (quality, plan, full profiles)
+- `/critique` -- review gates (quality, plan profiles)
 
 Related skills:
 - `superpowers:brainstorming` -- design exploration before planning
