@@ -29,17 +29,9 @@ git diff {BASE_SHA}..{HEAD_SHA}
 
 ## Reviewer Policy
 
-- Confirm the actual alignment units, consumer boundaries, and semantic owners before judging where a problem occurs.
-- If a problem comes only from wrong analysis granularity, generic-experience guessing, or a path not triggered by the current implementation, do not output it as blocking or near-blocking.
-- Default to `near-blocking` when these signals appear; upgrade to `blocking` only with evidence of real error or production risk:
-  - Legacy config keys or loose parsing without real historical users
-  - Debug switches or observation scaffolding exposed to external config in no-op stages
-  - Per-forward wrappers, hooks, or abstraction layers outside plan scope
-  - Shadow state variables threaded through runtime (should be init-time assertions)
-  - Unplanned scope expansion (async paths, dp_size>1, diffusion bucketing, etc.)
-  - Config bridging that confuses ownership (rollout policy written back to engine cfg)
-
-Suppress findings that recommend adding abstractions, safety mechanisms, or structural patterns beyond what current code paths and current consumers require. A proposed fix that adds more complexity than the risk it addresses is itself over-designed — do not report it.
+1. **Ground in source.** Every finding must cite a real code path, file, and line. Do not report issues based on generic experience or hypothetical scenarios.
+2. **Suppress speculative findings.** If the issue stems from a path not triggered by the current implementation, or requires material inference about future usage, do not report it.
+3. **Minimize false positives.** Default to `near-blocking`; upgrade to `blocking` only with evidence of real error or production risk. Do not recommend adding abstractions or safety mechanisms beyond what current code paths require.
 
 ## Output Format
 

@@ -20,14 +20,14 @@ Plan creation is handled by native plan mode or `/critique --plan` for review. T
 | **Standalone** | User or `/caffeine` calls directly | Drives task loop + runs `/critique` gates + owns ledger | N/A |
 | **Embedded** | `/harness` delegates during run phase | Parses plan + dispatches implementer per task | Drives round loop, runs verification gates, owns state + final review |
 
-**Standalone**: planning owns the full lifecycle — task sequencing, implementer dispatch, `/critique --spec`, `/critique --quality`, final `/critique` (full), and its own ledger.
+**Standalone**: planning owns the full lifecycle — task sequencing, implementer dispatch, `/critique --quality` (includes spec compliance), final `/critique` (full), and its own ledger.
 
 **Embedded**: planning is a plan adapter + implementer dispatcher only. Harness drives one round per task:
 
 ```
 harness round N (for task N):
   propose:  planning dispatches implementer
-  verify:   harness runs verification gates (/critique --spec, /critique --quality)
+  verify:   harness runs verification gate (/critique --quality)
   evaluate: harness decides keep/discard
   record:   harness writes state.jsonl
 ```
@@ -49,7 +49,7 @@ When a task involves mocks, test doubles, or test-only seams, read `references/t
 ### Standalone
 
 - Implementer and review gates are all foreground child contexts, consumed sequentially.
-- Spec and quality review go through `/critique --spec` and `/critique --quality`.
+- Quality review goes through `/critique --quality` (includes spec compliance).
 - Orchestration stays in controller. Child workers do not invoke `/fanout` or `/critique`.
 
 ### Embedded (in /harness)
@@ -62,7 +62,7 @@ When a task involves mocks, test doubles, or test-only seams, read `references/t
 - Multiple independent tasks or cross-file tasks needing staged verification: use this skill.
 - Single low-risk task (one-file fix, obvious local change): stay local.
 - If coordination overhead exceeds implementation effort: too heavy for this skill.
-- Once chosen, keep the full gate: implement -> spec review -> quality review. No shortcuts.
+- Once chosen, keep the full gate: implement -> quality review. No shortcuts.
 
 ## The Process (Standalone)
 
@@ -77,12 +77,9 @@ digraph process {
         "Questions?" [shape=diamond];
         "Answer, re-launch" [shape=box];
         "Implementer implements, tests, commits" [shape=box];
-        "/critique --spec" [shape=box];
-        "Spec pass?" [shape=diamond];
-        "Fix spec gaps" [shape=box];
         "/critique --quality" [shape=box];
         "Quality pass?" [shape=diamond];
-        "Fix quality issues" [shape=box];
+        "Fix issues" [shape=box];
         "Mark task complete" [shape=box];
     }
     "Normalize input into task manifest" [shape=box];
@@ -94,14 +91,10 @@ digraph process {
     "Questions?" -> "Answer, re-launch" [label="yes"];
     "Answer, re-launch" -> "Launch implementer (./implementer-prompt.md)";
     "Questions?" -> "Implementer implements, tests, commits" [label="no"];
-    "Implementer implements, tests, commits" -> "/critique --spec";
-    "/critique --spec" -> "Spec pass?";
-    "Spec pass?" -> "Fix spec gaps" [label="fail"];
-    "Fix spec gaps" -> "/critique --spec" [label="re-review"];
-    "Spec pass?" -> "/critique --quality" [label="pass"];
+    "Implementer implements, tests, commits" -> "/critique --quality";
     "/critique --quality" -> "Quality pass?";
-    "Quality pass?" -> "Fix quality issues" [label="fail"];
-    "Fix quality issues" -> "/critique --quality" [label="re-review"];
+    "Quality pass?" -> "Fix issues" [label="fail"];
+    "Fix issues" -> "/critique --quality" [label="re-review"];
     "Quality pass?" -> "Mark task complete" [label="pass"];
     "Mark task complete" -> "More tasks?";
     "More tasks?" -> "Launch implementer (./implementer-prompt.md)" [label="yes"];
@@ -140,7 +133,7 @@ Field semantics:
 
 ## Handling Implementer Status
 
-**DONE:** Standalone: enter `/critique --spec`. Embedded: return to harness for verification gates.
+**DONE:** Standalone: enter `/critique --quality`. Embedded: return to harness for verification gates.
 
 **DONE_WITH_CONCERNS:** Implementation complete with doubts. Read concerns: correctness/scope issues -> address before review; observational notes -> record and continue to review.
 
@@ -161,7 +154,7 @@ Do not ignore escalation. Do not retry the same model without changes.
 Append-only JSONL ledger at `.agents/planning.jsonl`. Events:
 
 - `task_started`: `{task_id, subject, timestamp}`
-- `review_completed`: `{task_id, profile: "spec"|"quality", verdict: "pass"|"fail"|"needs_escalation", timestamp}`
+- `review_completed`: `{task_id, profile: "quality", verdict: "pass"|"fail"|"needs_escalation", timestamp}`
 - `task_completed`: `{task_id, timestamp}`
 - `run_completed`: `{final_verdict: "pass"|"fail"|"needs_escalation", timestamp}`
 
@@ -187,13 +180,13 @@ Do not write `.agents/planning.jsonl`. Instead:
 
 Never:
 - Implement on main/master without user consent
-- Skip spec or quality review in standalone mode
+- Skip quality review in standalone mode
 - Continue with unresolved issues
 - Launch multiple implementers in parallel (file conflicts)
 - Let child context read the plan file (provide full text in prompt)
 - Omit scene-setting context in implementer prompt
 - Accept "close enough" on spec compliance
-- Start quality review before spec passes
+- Start quality review before spec compliance phase passes
 - Treat `needs_escalation` as `pass` or `fail`
 - Embedded mode: run `/critique` or drive task loop (harness owns these)
 - Embedded mode: write own ledger (harness owns state)
@@ -213,7 +206,7 @@ Child context fails: launch new child context to fix. Do not fix manually (conte
 ## Integration
 
 Required workflow skills:
-- `/critique` -- review gates (spec, quality, plan, full profiles)
+- `/critique` -- review gates (quality, plan, full profiles)
 
 Related skills:
 - `superpowers:brainstorming` -- design exploration before planning

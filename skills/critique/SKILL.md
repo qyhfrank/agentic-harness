@@ -1,40 +1,28 @@
 ---
 name: critique
 description: 'Use when code, plan, or config changes need structured review with source-anchored findings, such as spec checks, quality gates, plan review, or final multi-angle review. Triggers on /critique, "review this", "code review", "review the plan", "review the config", or "find blocking issues"; do not use to respond to existing review feedback after comments arrive.'
-argument-hint: <what to review> [--spec|--quality|--plan|--adversarial] [-a thinker|doer|codex|opus] [--model <name>] [--effort <level>]
+argument-hint: <what to review> [--quality|--plan]
 ---
 
 Arguments: $ARGUMENTS
 
 # Critique
 
-Select profile + engine → structured findings with source anchors. `quality` and `full` always include simplify-style cleanup heuristics; `full` reserves one parallel reviewer lane for them. This adds review coverage, not `/simplify`'s fix workflow.
+Structured review with source-anchored findings. Select a profile, get a verdict.
 
-## Profiles and Engines
+## Profiles
 
-| Profile | Question | Default Engine |
+| Profile | Question | Reviewers |
 |---|---|---|
-| `spec` | Does implementation match requirements? | `single` |
-| `quality` | Clean, tested, maintainable? | `single` |
-| `plan` | Complete, coherent, ready to execute? | `single` |
-| `adversarial` | Can this fail in subtle, expensive ways? | `single` |
-| `full` | Multi-angle review with role diversity / cross-validation | `fanout` |
-
-| Engine | How |
-|---|---|
-| `single` | One reviewer child context, no `/fanout`. Focused per-task gates. |
-| `fanout` | Parallel reviewers via `/fanout`. Full reviews and merge gates. |
+| `quality` | Does implementation match requirements and is it clean, tested, maintainable? | 1 |
+| `plan` | Is this plan complete, coherent, and ready to execute? | 1 |
+| `full` | Multi-angle review with role diversity | N via `/fanout` |
 
 Arguments:
 
-- `--spec`: profile=spec, engine=single
-- `--quality`: profile=quality, engine=single
-- `--plan`: profile=plan, engine=single
-- `--adversarial`: profile=adversarial, engine=single
-- No flag: profile=full, engine=fanout
-- `-a thinker|doer|codex|opus`: worker override for fanout engine. No flag → `/fanout` infers.
-- `--model <name>`: model override for codex/thinker workers in fanout engine. Pass-through to `/fanout`.
-- `--effort <level>`: reasoning effort for codex/thinker workers in fanout engine. Pass-through to `/fanout`.
+- `--quality`: single reviewer, quality + spec compliance
+- `--plan`: single reviewer, plan/config artifact
+- No flag: full multi-reviewer review via `/fanout`
 
 ## Verdict Envelope
 
@@ -44,27 +32,19 @@ All profiles return:
 **Verdict:** pass | fail | needs_escalation
 **Findings:** F-001, F-002, ... (or "none")
 **Assessment:** <one-line summary>
-**Coverage:** requirements checked, files reviewed, risk dimensions assessed
-**Unchecked:** areas not reviewed or not reviewable via static analysis
 ```
 
-- `pass`: no blocking findings in checked scope. Bounded by coverage, not absolute correctness.
+- `pass`: no blocking findings.
 - `fail`: blocking findings exist, must address.
 - `needs_escalation`: cannot determine, needs broader context or human judgment.
 
-Coverage mandatory when verdict=pass. Single-reviewer verdicts are gate inputs, not completion oracles — inside `/harness`, a single-reviewer pass contributes to `review_streak` but does not satisfy `close_rule` on its own.
-
-## Profile: spec
-
-Template: `references/spec-review-profile.md`
-
-Input: task requirements + implementer's claimed changes. Checks missing requirements, extra unneeded work, misunderstandings. Verify by reading code, not trusting the report.
+Single-reviewer verdicts are gate inputs, not completion oracles — inside `/harness`, a single-reviewer pass contributes to `review_streak` but does not satisfy `close_rule` on its own.
 
 ## Profile: quality
 
 Templates: `references/quality-review-profile.md`, `references/code-reviewer.md`
 
-Input: BASE_SHA, HEAD_SHA, implementation description, plan/requirements reference. Prerequisite: spec compliance must pass first when both profiles run in sequence.
+Input: BASE_SHA, HEAD_SHA, implementation description, plan/requirements reference. First verifies spec compliance (did you build what was asked?), then checks code quality, architecture, and testing.
 
 ## Profile: plan
 
@@ -72,65 +52,36 @@ Template: `references/plan-review-profile.md`
 
 Input: planning artifact (plan doc, harness config.yaml, task strategy) + goal/spec reference. Use after plan mode, harness scaffold/plan, or any planning artifact is ready. Checks completeness, goal alignment, boundary coverage, verification readiness.
 
-## Profile: adversarial
-
-Template: `references/adversarial-review-profile.md`
-
-Input: code change context (diff, target label, optional focus area). Challenges the implementation approach and design choices rather than checking spec compliance. Prioritizes failures that are expensive, dangerous, or hard to detect: auth/trust boundaries, data loss, race conditions, rollback safety, stale state, schema drift. Uses a skeptical stance with confidence-annotated findings.
-
 ## Profile: full
 
-Multi-angle review.
+Multi-angle review via `/fanout`.
 
 ### When to Use
 
 Required: after completing major features, before merging to main.
 Recommended: when stuck (fresh perspective), before refactoring (establish baseline), after complex bug fixes.
 
-### Strategy Selection
+### Reviewer Allocation
 
-Main agent selects strategy:
+Reviewer count based on diff size (user override takes precedence):
 
-- **Strategy R** (Role-Diverse): broad changes, architecture boundaries, multi-risk dimensions.
-- **Strategy H** (Homogeneous Cross-Validation): local changes, single goal, reduce false-negative randomness.
-- User-specified strategy takes precedence.
+- Single file / <50 lines diff: 3
+- Multi-file / 50-200 lines diff: 5 (fanout default)
+- Architectural change / >200 lines diff: 5 + specialized roles as needed
 
-Over-engineering check: dedicated role under Strategy R, folded into unified prompt under Strategy H.
+Row count, naming, and focus angles are dynamically generated per task. One reviewer lane should take a skeptical stance — actively look for failure modes (auth boundaries, data loss, race conditions, rollback safety, stale state, schema drift) rather than validating the change.
 
-### Row and Prompt Generation
-
-- Row count, naming, focus angles: dynamically generated per task.
-- Reviewer count heuristic (user override takes precedence):
-  - Single file / <50 lines diff → 3
-  - Multi-file / 50–200 lines diff → 5 (fanout default)
-  - Architectural change / >200 lines diff → 5 + specialized roles as needed
-
-### Core Thinking
-
-- Role diversity → coverage (different angles).
-- Homogeneous sampling → stability (reduce randomness).
-- Sample aggregation: main agent critically merges, filters unsupported suggestions.
-
-### Built-in Simplify Coverage
-
-- `quality` and `full` always apply simplify heuristics for reuse, duplication, abstraction bloat, and efficiency.
-- `full` always reserves one reviewer lane for simplify coverage. Under Strategy H, keep that lane and use the remaining lanes for homogeneous cross-validation.
-- `spec`, `plan`, and `adversarial` stay focused on their own gate questions. They do not emit cleanup suggestions unless the issue already rises to an `F-NNN` finding inside that profile's normal scope.
-- Simplify coverage reviews:
-  - existing helpers/utilities that should replace new duplicate logic
-  - redundant state, parameter sprawl, copy-paste variants, leaky abstractions, stringly-typed additions
-  - unnecessary work, missed concurrency, hot-path bloat, pre-check-before-operate, memory leaks, overly broad reads/loads
-- This coverage proposes the smallest useful cleanup. It does not invoke `/simplify` and does not edit code.
+Main agent critically merges reviewer outputs and filters unsupported suggestions.
 
 ## Invocation Boundary
 
 - Invoked by the highest context owning final review judgment.
 - Content-producing child workers (implementer, reviewer, researcher) should not recursively invoke `/critique`.
-- `/planning` per-task gates use `--spec` / `--quality` (single engine). Final review uses bare `/critique` (full profile).
+- `/planning` per-task gates use `--quality` (single reviewer). Final review uses bare `/critique` (full profile).
 
 ## Output Contract
 
-Default: output `blocking` and `near-blocking` only. `quality` and `full` may also append `simplify` suggestions when there is a meaningful cleanup that is real, local, and non-gating. `non-blocking` only when user explicitly requests.
+Default: output `blocking` and `near-blocking` only. `non-blocking` only when user explicitly requests.
 
 Finding format (all profiles):
 
@@ -145,79 +96,38 @@ Finding format (all profiles):
 **Minimal Fix:** shortest safe change
 ```
 
-Profile-specific extensions: the adversarial profile adds a `**Confidence:** 0.0-1.0` field after Trigger (see `references/adversarial-review-profile.md`).
-
-Full-profile main agent verification:
-
-```markdown
-### Main Verification · F-001
-
-**Status:** verified
-**Evidence Anchor:** path:line
-**Note:** concise verification note
-```
-
-Rendering: markdown code block, bold field names, field order Finding → Impact → Trigger → Anchor → Minimal Fix. Pack short fields; separate long fields with blank lines. Blockquote format only when user explicitly requests.
-
-For `quality` and `full`, append simplify suggestions when present:
-
-```markdown
-### S-001 · `simplify`
-
-**Suggestion:** concrete simplification
-**Why:** short payoff
-**Anchor:** path:line
-**Minimal Change:** shortest safe cleanup
-```
-
-`S-NNN` items do not affect the verdict unless the same issue also qualifies as an `F-NNN` finding.
+Full-profile: main agent verifies all blocking finding anchors point to real source locations before returning the verdict.
 
 ## Reviewer Policy
 
-All reviewer findings must:
+Three core rules for all reviewer findings:
 
-- Confirm actual alignment units, consumer boundaries, and semantic owners before judging where the problem lies.
-- Suppress findings that stem only from wrong analysis granularity, generic-experience guessing, or paths not triggered by current implementation.
-- Keep skill and reviewer prompts project-agnostic; project-specific terms only as evidence anchors from reviewed code.
-
-Default to `near-blocking` for these signals; upgrade to `blocking` only with proof of real error or production risk:
-
-- Legacy config key / lenient parsing with no real historical consumers
-- Debug switches or observability structures exposed to external config in no-op stages
-- Per-forward wrapper/hook or extra abstraction layer outside plan scope
-- Shadow state variables threading through runtime (should be init assertions)
-- Unplanned scope expansion
-- Config bridge injection causing ownership confusion
-
-These findings must also: state concrete facts (no vague "over-engineering" labels), describe the trigger path or consumer relationship in current implementation, and propose the minimal safe fix.
-
-Suppress findings that recommend adding abstractions, safety mechanisms, or structural patterns beyond what current code paths and current consumers require.
+1. **Ground in source.** Every finding must cite a real code path, file, and line. Do not report issues based on generic experience or hypothetical scenarios.
+2. **Suppress speculative findings.** If the issue stems from a path not triggered by the current implementation, or requires material inference about future usage, do not report it.
+3. **Minimize false positives.** Default to `near-blocking`; upgrade to `blocking` only with evidence of real error or production risk. Do not recommend adding abstractions or safety mechanisms beyond what current code paths require.
 
 ## Execution
 
-### Single Engine (--spec, --quality, --plan, --adversarial)
+### Single Reviewer (--quality, --plan)
 
 1. Parse arguments, determine profile.
-2. Spawn single reviewer child context with profile's prompt template. For `quality`, the reviewer also runs simplify heuristics inline and may emit `S-NNN` suggestions.
+2. Spawn single reviewer child context with profile's prompt template.
 3. Collect verdict envelope.
-4. Main agent verifies anchors point to real source locations (lightweight check), including any `S-NNN` suggestions that will be surfaced.
+4. Verify finding anchors point to real source locations.
 5. Return verdict.
 
-### Fanout Engine (full, default)
+### Full Review (default)
 
-1. Parse arguments. Pass `-a` to `/fanout` if present. If `codex` worker requested, load `/codex-exec` via Skill tool first. Pass `--model` and `--effort` to `/fanout` if specified.
-2. Load `/fanout`.
-3. Select Strategy R or H; dispatch reviewers with `-m sample` and parsed `-a` argument. Always reserve one reviewer lane for simplify coverage. When dispatching codex workers, `/fanout` auto-wraps reviewer prompts with XML blocks (`<task>`, `<grounding_rules>`, `<structured_output_contract>`) for better GPT-5.4 compatibility.
-4. Collect outputs, run sample aggregation.
-5. Main agent source-verifies all blocking findings and any surfaced `S-NNN` suggestions; output `Main Verification` blocks for `F-NNN` findings.
-6. Return verdict envelope.
+1. Load `/fanout`.
+2. Dispatch reviewers with `-m sample`. Dynamically generate reviewer roles and focus angles.
+3. Collect outputs, critically merge findings.
+4. Source-verify all blocking findings.
+5. Return verdict envelope.
 
 ## Reference Index
 
 | File | Purpose | Used by |
 |---|---|---|
-| `references/spec-review-profile.md` | Spec compliance reviewer prompt | spec profile |
-| `references/quality-review-profile.md` | Code quality reviewer prompt wrapper | quality profile |
+| `references/quality-review-profile.md` | Quality + spec compliance reviewer prompt | quality, full profiles |
 | `references/plan-review-profile.md` | Plan/config reviewer prompt | plan profile |
-| `references/adversarial-review-profile.md` | Adversarial challenge reviewer prompt | adversarial profile |
 | `references/code-reviewer.md` | Base code review agent prompt + policy | quality, full profiles |
