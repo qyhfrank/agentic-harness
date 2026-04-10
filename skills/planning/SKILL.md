@@ -135,8 +135,8 @@ tasks:
 
 Field semantics:
 - `implementation_protocol`: inherited from plan-level if omitted, default `tdd_required`
-- `risk_tier`: inferred from task characteristics (public API, security, data migration → high; cross-file behavior change → medium; internal refactor, docs → low). Drives checkpoint decisions in standalone mode and harness close authority in embedded mode.
-- `checkpoint_required`: when true, standalone mode pauses for human review before proceeding to next task; embedded mode signals harness to require `human_review` close authority for this round
+- `risk_tier`: inferred from task characteristics (public API, security, data migration → high; cross-file behavior change → medium; internal refactor, docs → low). Drives checkpoint decisions in standalone mode. In embedded mode, advisory: the harness controller may pause for human review, but `close_rule` remains task-level.
+- `checkpoint_required`: when true, standalone mode pauses for human review before proceeding to next task; embedded mode signals the harness controller to pause for human review before continuing (does not override the task-level `close_rule`)
 
 ## Handling Implementer Status
 

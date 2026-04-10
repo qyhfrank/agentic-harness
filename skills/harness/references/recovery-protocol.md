@@ -8,13 +8,14 @@ Rules for context.md maintenance, state.jsonl schema, and cross-session recovery
 # Harness Context
 
 ## Current State
-- phase: B (run)
+- phase: run
 - round: 12 / 50
 - harness_root: /absolute/path/to/repo
 - worktree: <task_slug> branch, path /absolute/path/.claude/worktrees/<task_slug>/
 - current_objective: "reduce inference latency below 200ms"
 - best_result: "76.5 latency score (round 9, commit abc1234)"
 - last_action: "round 11 attempted X, verifier failed, reverted"
+- review_streak: 3
 
 ## Working Memory
 - Observations about the codebase relevant to the task
@@ -80,13 +81,17 @@ One UTF-8 JSON object per line, LF line endings, append-only.
   "ts": "2026-04-02T09:01:12Z",
   "round": 0,
   "commit": "a1b2c3d",
-  "verification": { "status": "pass" },
+  "verification": {
+    "status": "pass",
+    "gates": {"typecheck": "pass", "lint": "pass", "unit-tests": "pass"},
+    "review_streak": 0
+  },
   "evaluation": { "result": "baseline" },
   "summary": "initial measurement on task branch"
 }
 ```
 
-**Round** — exactly once per completed round:
+**Round (kept)** — exactly once per completed round:
 
 ```json
 {
@@ -95,10 +100,33 @@ One UTF-8 JSON object per line, LF line endings, append-only.
   "ts": "2026-04-02T09:18:40Z",
   "round": 4,
   "commit": "m0n1o2p",
-  "verification": { "status": "pass" },
-  "evaluation": { "result": "keep", "frontier": "improved" },
+  "verification": {
+    "status": "pass",
+    "gates": {"typecheck": "pass", "lint": "pass", "review": "pass", "e2e": "pass"},
+    "review_streak": 3
+  },
+  "evaluation": { "result": "kept" },
   "metric": { "value": 76.5, "delta": 4.4 },
   "summary": "batched inference, reduced memory footprint"
+}
+```
+
+**Round (reverted)** — failed round example:
+
+```json
+{
+  "event": "round_completed",
+  "task_id": "000-fix-auth-timeout",
+  "ts": "2026-04-02T09:25:10Z",
+  "round": 5,
+  "commit": null,
+  "verification": {
+    "status": "fail",
+    "gates": {"typecheck": "pass", "lint": "fail"},
+    "review_streak": 0
+  },
+  "evaluation": { "result": "reverted", "reason": "gate_failed" },
+  "summary": "lint failed: unused import in auth.py"
 }
 ```
 
@@ -125,8 +153,13 @@ One UTF-8 JSON object per line, LF line endings, append-only.
 | `summary` | all | Short description. |
 | `round` | all | Baseline = 0, monotonically increasing. |
 | `commit` | baseline, round | Short SHA or `null`. |
-| `verification.status` | baseline, round | `pass`, `fail`, `needs_escalation`. |
-| `evaluation.result` | baseline, round | `baseline`, `keep`, `discard`, `crash`, `no_op`, `hook_blocked`, `needs_escalation`, `complete`. |
+| `verification.status` | baseline, round | `pass`, `fail`, `blocked`. |
+| `verification.gates` | baseline, round | Object mapping check name to `pass` or `fail`. Keys present only for checks that ran in this round. |
+| `verification.review_streak` | baseline, round | Integer. Consecutive review passes. Resets to 0 on review fail or reverted round. |
+| `evaluation.result` | baseline_recorded | `baseline`. |
+| `evaluation.result` | round_completed | `kept`, `reverted`, `blocked`, `done`. |
+| `evaluation.reason` | round (when `reverted` or `blocked`) | `gate_failed`, `crash`, `hook_blocked`, `below_threshold`, `escalation`. |
+| `metric` | round (when `objective: optimize`) | Object with `value` and `delta`. Optional for `satisfy` objective. |
 | `disposition` | task_disposed | `merged`, `kept`, `discarded`. |
 
 ### Append-Only Rule
@@ -137,7 +170,7 @@ Never edit or delete events. One event per round. Corrections go in the next rou
 
 1. Exactly one `baseline_recorded` at round `0`.
 2. Round numbers strictly increasing by 1.
-3. `keep` or `complete` always has `verification.status: pass`.
+3. `kept` or `done` always has `verification.status: pass`.
 4. `state.jsonl` is source of truth for facts; `context.md` for meaning.
 
 ---
@@ -148,9 +181,9 @@ On session start (fresh agent), execute this sequence:
 
 ```
 0. Resolve harness root      -> walk up for .harness/, git worktree list, git rev-parse --show-toplevel
-1. Resolve current task       -> explicit task_id, .harness-task, sole task, .harness/current-task
+1. Resolve current task       -> explicit task_id, worktree-context match, sole task, or ask the user
 2. Verify worktree state      -> confirm in task's worktree, harness root accessible
-3. Read config.yaml           -> boundaries, verification, evaluation, stop guards
+3. Read config.yaml           -> boundaries, checks, evaluation, stop guards
 4. Read context.md            -> phase, progress, durable notes, blockers
 5. Read state.jsonl           -> tail recent events
 6. Read AGENTS.md             -> protocol constraints

@@ -1,6 +1,6 @@
 # Run Protocol
 
-The autonomous propose-verify-evaluate-record cycle, plus verification gates and evaluation rules.
+The autonomous propose-verify-evaluate-record cycle, plus checks model and evaluation rules.
 
 ## Prerequisites
 
@@ -21,7 +21,7 @@ The autonomous propose-verify-evaluate-record cycle, plus verification gates and
 
 - Read context.md Next Steps for direction.
 - Check context.md Durable Notes: do not revisit known dead ends, violate known constraints, or ignore known tool quirks.
-- If the change is non-trivial, invoke `brainstorming` to explore alternatives first.
+- If the change is non-trivial, invoke `/brainstorming` to explore alternatives first.
 - Respect `implementation.protocol` from config:
   - `tdd_required`: create failing test first, confirm it fails, then write minimal code to pass.
   - `tdd_preferred`: follow TDD when practical, record why if skipped.
@@ -34,21 +34,31 @@ The autonomous propose-verify-evaluate-record cycle, plus verification gates and
 
 - Stage only files within `boundary.mutable`.
 - Commit with message: `harness(round-{N}): <description>`
-- If pre-commit hook blocks: record `hook_blocked`, move to Record.
+- If pre-commit hook blocks: record `reverted` (reason: `hook_blocked`), move to Record.
 
 ### 3. Verify
 
-Filter gates by frequency:
-- `every_round`: always run (Tier 0 and Tier 1 gates).
-- `milestone`: run every N rounds (default 10), plus always on final round.
-- `final`: only during completion verification pass.
+Read `checks[]` from config.yaml. Partition into:
 
-Execute eligible gates in order:
-1. Run all mandatory `command` gates.
-2. If `architecture_guard` is configured and its frequency matches, run it. Treat as a mandatory command gate (fail = discard).
-3. On all pass, run `agent_review` gates (if configured). Use `/critique` as the review engine.
-4. On pass or escalation, queue `human_review` if configured.
-5. Short-circuit on first mandatory deterministic `fail`.
+```
+cheap    = checks where cost == "cheap" (includes probes)
+review   = checks where kind == "review"
+expensive = checks where cost == "expensive"
+```
+
+Execute in order:
+
+**3a. Cheap checks** -- Run each cheap command in list order. Record per-gate verdict in `verification.gates`. On first fail: short-circuit, aggregate status = `fail`, skip 3b/3c.
+
+**3b. Review gate** (if configured) -- Invoke `/critique` with appropriate profile. Record verdict in `verification.gates`. On fail: aggregate status = `fail`, skip 3c. On `needs_escalation`: aggregate status = `blocked`, skip 3c. On pass: increment `review_streak` counter.
+
+**3c. Expensive checks** (when applicable) -- Run expensive checks only when:
+- This is a close attempt (`close_rule` requires them and objective appears met), OR
+- Round number hits `evaluation.expensive_interval` (default 10).
+
+Record per-gate verdict. On first fail: short-circuit, aggregate status = `fail`.
+
+**3d. Human review** (if `close_rule` includes `human_required`) -- Queue for human review. Proceed to Evaluate with current state.
 
 Capture full stdout/stderr to `artifacts/round-{N}/`.
 
@@ -58,28 +68,33 @@ Write an evidence manifest to `artifacts/round-{N}/manifest.json`:
 {
   "round": 4,
   "commit": "m0n1o2p",
-  "commands": [{"name": "make test", "exit_code": 0}, {"name": "eslint .", "exit_code": 0}],
+  "checks": [
+    {"name": "typecheck", "cost": "cheap", "exit_code": 0},
+    {"name": "lint", "cost": "cheap", "exit_code": 0},
+    {"name": "review", "kind": "review", "verdict": "pass"},
+    {"name": "e2e", "cost": "expensive", "exit_code": 0}
+  ],
   "artifacts": ["stdout.log", "attempted.patch"],
   "diff_stat": "+42 -17 across 3 files"
 }
 ```
 
+Aggregate `verification.status`:
+- All gates pass -> `pass`
+- Any gate fail -> `fail`
+- Review escalated -> `blocked`
+
+When expensive checks are skipped in a round, their names do not appear in `verification.gates`. They were not applicable, not skipped.
+
 ### 4. Evaluate
 
-| Verification + evaluation outcome | Result |
-|---|---|
-| Deterministic gate failed | `discard` |
-| Review produced unresolved escalation | `needs_escalation` |
-| Verification command crashed | `crash` |
-| Verified, but improvement below `min_delta` | `no_op` |
-| Verified and frontier improved or held | `keep` |
-| Objective met and close authority satisfied | `complete` |
+Apply the Decision Rules (see Evaluation Rules below).
 
-After revert (`discard` or `crash`): verify the revert itself does not break baseline.
+After revert (`reverted`): verify the revert itself does not break baseline.
 
 ### 5. Record
 
-Append one event to `state.jsonl`. Required fields: `event`, `task_id`, `ts`, `round`, `commit`, `verification.status`, `evaluation.result`, `summary`.
+Append one event to `state.jsonl`. Required fields: `event`, `task_id`, `ts`, `round`, `commit`, `verification.status`, `verification.gates`, `verification.review_streak`, `evaluation.result`, `evaluation.reason` (when `reverted` or `blocked`), `summary`.
 
 Before writing context.md, route information correctly:
 - Contract/threshold -> `config.yaml`
@@ -98,24 +113,20 @@ Update context.md:
 
 #### Stop Conditions (check in order)
 
-1. **Objective met** (`satisfy` mode): all acceptance_criteria pass and close_authority satisfied.
-2. **Budget exhausted**: current round >= `max_rounds`. (`-1` disables budget stop.)
-3. **Stagnation**: last N rounds all `no_op` or `discard`.
-4. **Escalation**: result is `needs_escalation`. Pause for human input.
-5. **Complete**: latest round result is `complete`.
+1. **Done**: latest round result is `done` (objective met + `close_rule` satisfied).
+2. **Budget exhausted**: current round >= `termination.stop_guards.budget.max_rounds`. (`-1` disables.)
+3. **Stagnation**: last N rounds all `reverted` (N = `termination.stop_guards.stagnation.rounds`, default 5).
+4. **Blocked**: result is `blocked`. Pause for human input.
 
 #### Doom Loop Detection
 
-If the same guard fails with the same error signature N times (N = `doom_loop_threshold`):
+If the same check fails with the same error signature N times (N = `entropy.doom_loop_threshold`, default 3):
 
-First invoke `systematic-debugging` to diagnose root cause. Then:
+1. Invoke `/systematic-debugging` to diagnose root cause.
+2. If diagnosis produces a viable new approach: pivot, record failed approach in Durable Notes, continue.
+3. If diagnosis does not produce a viable approach: pause and ask the human.
 
-| Action | Behavior |
-|---|---|
-| `reread_and_pivot` | Re-read mutable files, invoke `brainstorming` for alternatives, record failed approach in Durable Notes. |
-| `codex_rescue` | Delegate diagnosis to Codex via `/codex-exec`. If viable fix found, continue. Otherwise fall back to `ask_human`. |
-| `widen_boundary` | Suggest expanding mutable boundary. Requires user approval. |
-| `ask_human` | Pause, present failure pattern, ask for guidance. |
+Optional config hint (`entropy.doom_loop_action`): `reread_and_pivot` (default), `codex_rescue`, `ask_human`. These are preferences for escalation style, not a mandatory chain.
 
 #### Continue
 
@@ -125,73 +136,67 @@ Do not stop on a successful round while non-blocked work remains.
 
 ---
 
-## Verification Gates
+## Checks Model
 
-### Gate Types
+Every entry in `checks[]` has exactly one classification: `cost: cheap`, `cost: expensive`, or `kind: review`. A check must not have both `cost` and `kind`. Execution order: cheap (3a) → review (3b) → expensive (3c).
 
-| Type | Executor | Deterministic | Trust |
-|---|---|---|---|
-| `command` | script / test / lint / build | Yes | Medium |
-| `agent_review` | LLM reviewer via `/critique` | No | Low-Medium |
-| `human_review` | Human | N/A | Highest |
+### Probe Checks (optional)
 
-### Verification Tiers
+A `probe` is a cheap, task-specific command check that answers "did this specific change help?" Mark with `probe: true`. Runs alongside cheap checks in step 3a. Probe failure is informational in `satisfy` mode and does not force revert. To make a probe mandatory, configure it as a regular cheap check instead.
 
-| Tier | Question | Frequency | Examples |
-|---|---|---|---|
-| 0 | Did I break anything? | `every_round` | typecheck, lint, unit tests |
-| 1 | Did this specific change work? | `every_round` | isolated benchmark, profiling probe, smoke metric |
-| 2 | Does the whole system work? | `milestone` or `final` | full e2e suite, integration tests |
+When `objective: optimize` and no probe exists, note the gap in context.md Working Memory.
 
-**Tier 1 is the key insight.** Most workflows default to unit tests (Tier 0) or full e2e (Tier 2), skipping the middle. A Tier 1 gate is a task-specific isolated probe that answers "did this optimization actually help?" without running the full pipeline.
+### Review Gate Rules
 
-### Verdict Schema
-
-Every gate produces: `verdict: { status: pass|fail|needs_escalation, evidence: "..." }`
-
-### agent_review Rules
-
-1. Single reviewer cannot close a task. Produces `needs_escalation` or a candidate opinion only.
-2. Evidence must contain mechanically checkable anchors (file:line, test name). No anchors -> `needs_escalation`.
-3. When the repo has runnable deterministic checks, `agent_review` cannot be the sole mandatory gate.
-4. `/critique` is a good fit for structured review. It is not a completion oracle.
-
-### Oracle Lifting
-
-When `/critique` repeatedly confirms the same class of finding, invest in converting it to a `command` gate. Over time, the system should migrate from review-dependent to command-backed verification.
+1. Single reviewer cannot close a task. A review pass contributes to `review_streak` only.
+2. Evidence must contain mechanically checkable anchors (file:line, test name). No anchors produces `blocked` (escalation).
+3. When the repo has runnable deterministic checks, review cannot be the sole check.
+4. `/critique` is the review engine.
+5. `review_streak`: consecutive rounds where the review gate passed. Resets to 0 on review fail or any `reverted` round. On resume, restore from `verification.review_streak` in the last `state.jsonl` event (state.jsonl is authoritative over context.md).
 
 ---
 
 ## Evaluation Rules
 
-### Role Split
-
-| Role | Question |
-|---|---|
-| Verification | Is this candidate safe and acceptable enough to consider? |
-| Evaluation | Does this candidate improve the frontier, satisfy the objective, or require termination? |
+Verification asks "is this candidate safe?" Evaluation asks "does it improve the frontier?"
 
 ### Evaluation Results
 
-`baseline`, `keep`, `discard`, `crash`, `no_op`, `hook_blocked`, `needs_escalation`, `complete`.
+Four values with an optional `reason` field:
+
+| Result | Meaning | Typical reasons |
+|---|---|---|
+| `kept` | Change verified and frontier improved or held | -- |
+| `reverted` | Change rejected and rolled back | `gate_failed`, `crash`, `hook_blocked`, `below_threshold` |
+| `blocked` | Cannot proceed without external input | `escalation` |
+| `done` | Objective met and `close_rule` satisfied | -- |
+
+`baseline` appears only in `baseline_recorded` events, not in `round_completed` events. The four round-level results are `kept`, `reverted`, `blocked`, `done`.
 
 ### Decision Rules (apply in order)
 
-1. Verification failed -> `discard` or `needs_escalation`
-2. Verification crashed -> `crash`
-3. Verified but improvement below `min_delta` -> `no_op`
-4. Verified and frontier improved or held -> `keep`
-5. Objective met and close authority satisfied -> `complete`
+1. Verification failed -> `reverted` (reason: `gate_failed`)
+2. Verification command crashed -> `reverted` (reason: `crash`)
+3. Pre-commit hook blocked -> `reverted` (reason: `hook_blocked`)
+4. Verification blocked (review escalated) -> `blocked` (reason: `escalation`)
+5. Verified but improvement below threshold -> `reverted` (reason: `below_threshold`; optimize only with `min_delta`)
+6. Objective met and `close_rule` satisfied -> `done`
+7. Verified and frontier improved or held -> `kept`
 
-### Close Authority
+### close_rule
 
-| Type | Meaning |
+Auto-inferred from the checks list unless explicitly provided in config:
+
+| Condition | Inferred close_rule |
 |---|---|
-| `command_backed` | Completion requires deterministic command evidence. |
-| `human_review` | Human explicitly approves closure. |
-| `confirmed_review` | Review-based completion only after confirmation rules succeed. |
+| checks list contains at least one `cost: expensive` check | `expensive_pass` -- all expensive checks must pass |
+| No expensive checks, review gate configured | `review_streak(N)` -- N consecutive review passes (N from config, default 3) |
+| No expensive checks, no review gate | `all_pass` -- all cheap checks pass and acceptance criteria met |
+| Config has `human_required: true` | Additionally requires human approval regardless of above |
 
-`agent_review` alone never closes a task.
+`review_streak(N)` is satisfied when `verification.review_streak >= N` in the current round — i.e., N consecutive rounds where the review gate passed without any intervening revert.
+
+Optional in config.yaml. When omitted, inferred from checks list. When provided, overrides inference.
 
 ### Metric Interpretation
 
@@ -199,16 +204,16 @@ When `/critique` repeatedly confirms the same class of finding, invest in conver
 - `decrease`: lower is better
 - `none`: informational only; rely on acceptance criteria
 
-### Volatile Metrics
+### Volatile Metrics (optimize objective only)
 
-When `volatile: true`: run measurement N times (default 3), take median. Improvement must exceed `min_delta` for `confirmation_runs` consecutive rounds to be trusted.
+When `objective: optimize` and `metric.volatile: true`: run measurement N times (default `metric.samples: 3`), take median. Improvement must exceed `metric.min_delta` for `metric.confirmation_runs` consecutive rounds to be trusted.
 
 ---
 
 ## Rollback Safety
 
 - `revert_commit` (default): `git revert HEAD --no-edit`
-- `reset_to_last_pass`: `git reset --hard <last_keep_commit>` (destructive)
+- `reset_to_last_pass`: `git reset --hard <last_kept_commit>` (destructive)
 - `preserve_failed_experiments: true`: save diff to `artifacts/round-{N}/attempted.patch` before reverting
 
 ## Session Boundary
@@ -216,5 +221,5 @@ When `volatile: true`: run measurement N times (default 3), take median. Improve
 When ending a session mid-loop:
 1. Complete the current round (do not leave a half-committed state).
 2. Update context.md with full current state.
-3. If mid-verify, record as `crash` and revert.
+3. If mid-verify, record as `reverted` (reason: `crash`) and revert.
 4. Report: current round, best result, how to resume (`/harness run`).

@@ -17,23 +17,15 @@ Harness always uses task-scoped state. The minimal durable surface is:
 
 ```
 .harness/
-  current-task          # optional root-scoped default (not the active-task pointer)
   tasks/
     <task_id>/
       config.yaml
       context.md
       state.jsonl
       artifacts/        # optional; create lazily when a round actually emits outputs
-
-<worktree_root>/
-  .harness-task         # worktree-local task affinity (single line: <task_id>)
 ```
 
-`.harness-task` lives in the code worktree root, not inside `.harness/`. It is the authoritative local binding between a worktree and its task.
-
-`.harness/current-task` is a root-scoped default hint, not a global active-task pointer. It answers "which task to use when no stronger local signal exists" — it does not answer "which task is this repo currently working on".
-
-Single-task usage is just the case where only one task exists. It is not a second storage layout.
+No external pointer files exist. The agent resolves the active task from the task directory contents and user context (see Task Resolution).
 
 ### Minimal Task Surface
 
@@ -73,23 +65,23 @@ All `.harness/` reads and writes use the resolved harness root path. All code op
 
 ## Task Resolution
 
-Resolve the current task using a local-first fallback chain:
+Resolve the current task using this chain:
 
 1. Explicit task identifier supplied by the user or command wrapper
-2. `<worktree_root>/.harness-task` file (worktree-local affinity)
+2. If CWD is inside a worktree, scan each task's `context.md` for a `worktree:` field matching the current path or branch — if exactly one match, use it
 3. Sole task under `<harness_root>/.harness/tasks/`
-4. `<harness_root>/.harness/current-task` (root-scoped default, last resort; skip from inside a worktree)
+4. Multiple tasks exist — ask the user which task to work on
 
-If inside a worktree and steps 1-2 fail, check whether tasks exist. No tasks = fresh scaffold. Tasks exist but no local binding = stop and ask for an explicit task identifier.
+If no tasks exist, proceed to scaffold.
 
-If no task can be resolved, scaffold derives a task slug and task ID from the user's goal (see Task ID Generation). Scaffold writes `.harness-task` in the worktree root (if in a harness-managed worktree) and initializes `.harness/current-task` only when it does not yet exist and the new task is the sole task.
+If caffeine is active and step 4 is reached, treat the ambiguity as a hard blocker and emit a Wake-Up Handoff immediately rather than waiting for user input that will not arrive.
 
 ## Task ID Generation
 
 Generate two related names from the user's goal:
 
 - `task_slug`: a meaningful kebab-case slug derived from the goal. Use this for branch names, worktree names, and other human-facing labels.
-- `task_id`: the durable harness storage ID of the form `NNN-<task_slug>`. Use this only for `<harness_root>/.harness/tasks/<task_id>/`, `.harness-task`, and `<harness_root>/.harness/current-task`.
+- `task_id`: the durable harness storage ID of the form `NNN-<task_slug>`. Use this for `<harness_root>/.harness/tasks/<task_id>/`.
 
 The slug must be deterministic enough that a human can recognize the task from the ID alone.
 
@@ -129,7 +121,7 @@ Otherwise auto-infer (all paths relative to harness root):
   resolved task config finalized, state.jsonl has events --> run (resume)
 ```
 
-If inside a worktree but task resolution fails (`.harness-task` points to a non-existent task) and tasks already exist, stop and ask for an explicit task identifier. If no tasks exist yet, proceed to scaffold normally.
+If inside a worktree but task resolution fails and tasks already exist, stop and ask the user which task to work on. If no tasks exist yet, proceed to scaffold normally.
 
 If `state.jsonl` is empty but `context.md` or `artifacts/` clearly show prior work, treat as legacy archive recovery per `references/recovery-protocol.md`.
 
@@ -155,7 +147,7 @@ Create or enter a worktree named `<task_slug>` using the current platform's work
 - **Task ID known** (plan, run, resume, or scaffold with explicit goal): derive or resolve the task ID first, then use its slug portion for worktree and branch naming.
 - **Task ID unknown** (scaffold without goal): trigger the Missing Goal Gate to obtain the goal, derive the task slug, allocate the task ID, then create the worktree from the slug. Do not create a worktree before the goal is known.
 
-After entering the worktree, record the worktree path in the task's context.md and write the task ID to `<worktree_root>/.harness-task`. If `.harness-task` already exists with the correct task ID, do not overwrite.
+After entering the worktree, record the worktree path in the task's context.md.
 
 ### Opting Out
 
@@ -176,7 +168,7 @@ Scaffold requires a concrete task goal, not just a request to initialize harness
 
 Read `references/setup-protocol.md` Phase 0 and follow it.
 
-Produces: `config.yaml`, `context.md`, `state.jsonl`, `.harness-task`. `artifacts/` is created lazily. Also updates `AGENTS.md`.
+Produces: `config.yaml`, `context.md`, `state.jsonl`. `artifacts/` is created lazily. Also updates `AGENTS.md`.
 
 Idempotent: re-running scaffold only fills gaps, never overwrites existing files.
 
@@ -224,13 +216,13 @@ Run preflight checks first. On pass, enter the loop defined in `references/run-p
 When `caffeine` wraps `harness`, ordinary rounds stay silent unless a true blocker appears.
 
 - `state.jsonl`, `context.md`, and task artifacts are the in-progress checkpoint surface.
-- A user-facing `Wake-Up Handoff` belongs only to real stop conditions: `complete`, budget exhaustion, stagnation, explicit pause, session end, or a hard blocker.
-- Do not treat a successful `keep` round as a reason to stop or summarize to the user in handoff format while the task still has non-blocked work remaining.
+- A user-facing `Wake-Up Handoff` belongs only to real stop conditions: `done`, budget exhaustion, stagnation, explicit pause, session end, or a hard blocker.
+- Do not treat a successful `kept` round as a reason to stop or summarize to the user in handoff format while the task still has non-blocked work remaining.
 - If the user sends a sideband correction during run (for example, "keep going" or "you stopped too early"), absorb it through the loop owner state and take the next concrete run action in the same turn rather than ending on a prose-only acknowledgement.
 
 ## Completion
 
-When the harness loop terminates (evaluation result `complete`, budget exhausted, stagnation, or user-initiated stop), and the session is running inside a worktree created by Worktree Isolation:
+When the harness loop terminates (evaluation result `done`, budget exhausted, stagnation, or user-initiated stop), and the session is running inside a worktree created by Worktree Isolation:
 
 1. Report the final result summary (rounds completed, best frontier, acceptance criteria status).
 2. Proactively ask the user how to handle the worktree changes:
@@ -262,14 +254,14 @@ Harness operates within the ASB ecosystem. At specific points, prefer invoking a
 
 | Trigger | Skill | When |
 |---|---|---|
-| Plan phase: exploring task scope, boundary, verification, or evaluation strategy | `brainstorming` | Before filling config fields that require creative or architectural judgment |
-| Scaffold/plan phase complete: config.yaml finalized | `/critique --plan` | Review config completeness, boundary coverage, verification readiness before entering run |
-| Doom loop: same error repeats N times | `systematic-debugging` | Before attempting pivot -- diagnose root cause first |
-| Doom loop: pivot needed after diagnosis | `brainstorming` | Generate alternative strategies instead of guessing |
+| Plan phase: exploring task scope, boundary, checks, or evaluation strategy | `/brainstorming` | Before filling config fields that require creative or architectural judgment |
+| Scaffold/plan phase complete: config.yaml finalized | `/critique --plan` | Review config completeness, boundary coverage, checks readiness before entering run |
+| Doom loop: same error repeats N times | `/systematic-debugging` | Before attempting pivot -- diagnose root cause first |
+| Doom loop: pivot needed after diagnosis | `/brainstorming` | Generate alternative strategies instead of guessing |
 | Doom loop: `codex_rescue` action configured | `/codex-exec` | Delegate diagnosis to Codex with structured Diagnosis recipe. Fall back to `ask_human` if Codex cannot diagnose. |
-| `agent_review` or discovery review verification gate | `/critique` | Review stage with profile selection: spec, quality, adversarial, or full multi-angle review |
-| Run phase: complex multi-file change in Propose step | `brainstorming` | When the change is non-trivial and benefits from exploring alternatives |
-| Run phase: proposal is a multi-task plan with independent tasks | `/planning` | Embedded mode: planning parses plan + dispatches implementer; harness drives rounds and runs `/critique` verification gates. |
+| Review gate in checks list | `/critique` | Review stage with profile selection: spec, quality, adversarial, or full multi-angle review |
+| Run phase: complex multi-file change in Propose step | `/brainstorming` | When the change is non-trivial and benefits from exploring alternatives |
+| Run phase: proposal is a multi-task plan with independent tasks | `/planning` | Embedded mode: planning parses plan + dispatches implementer; harness drives rounds and runs `/critique` review gates. |
 
 These are not mandatory for every round. Invoke when the trigger condition matches. If the change is simple and the path is clear, skip straight to implementation.
 
@@ -277,21 +269,23 @@ These are not mandatory for every round. Invoke when the trigger condition match
 
 1. **Harness root owns state.** All `.harness/` reads and writes target the resolved harness root, never the worktree CWD.
 2. **Boundary is law.** Never modify files outside `boundary.mutable`. Never touch `boundary.immutable`.
-3. **Verification is mandatory.** Every proposed change must pass through the verification gate before being kept.
-4. **Evaluation is distinct.** Verifiers produce safety and quality signals; evaluators decide frontier updates, completion, and termination.
+3. **Verification is mandatory.** Every proposed change must pass through the checks before being kept.
+4. **Evaluation is distinct.** Checks produce safety and quality signals; evaluators decide frontier updates, completion, and termination.
 5. **State is append-only.** Never edit or delete existing events in `state.jsonl`. Only append.
 6. **Context survives sessions.** Update context.md every round so a fresh agent can resume.
-7. **Config is the contract.** All runtime behavior derives from config.yaml. No implicit defaults.
+7. **Config is the contract.** Auto-discovery of checks is permitted during scaffold; explicit config overrides auto-discovery. All other runtime behavior derives from config.yaml.
 8. **Reviewer context is bounded.** Reviewers get the diff, relevant files, AGENTS.md, and config excerpts they need. They do not get proposer reasoning as authority.
 9. **Implementation protocol is binding.** Respect `implementation.protocol` from config; test-first tasks require RED evidence before production code.
-10. **Oracle lifting is progressive.** When `/critique` repeatedly confirms the same class of finding, invest in converting it to a `command` gate. Over time, the system should migrate from review-dependent to command-backed verification.
-11. **Task resolution is local-first.** Worktree-local affinity (`.harness-task`) and branch matching take precedence over the repo-global `current-task` default. The global default never overrides a worktree-local signal.
-12. **One controller per task.** Exactly one harness controller writes `state.jsonl` and `context.md` for a given task. Child implementers dispatched by `/planning` do not write task state — the parent controller owns all ledger writes. Same-task multi-controller is not supported.
+10. **One controller per task.** Exactly one harness controller writes `state.jsonl` and `context.md` for a given task. Child implementers dispatched by `/planning` do not write task state — the parent controller owns all ledger writes. Same-task multi-controller is not supported.
+
+### Maintainer Notes
+
+- **Oracle lifting**: When `/critique` repeatedly confirms the same class of finding, invest in converting it to a cheap command check. Over time, the system should migrate from review-dependent to command-backed verification.
 
 ## Reference Index
 
 | File | Purpose | Loaded by |
 |---|---|---|
 | `setup-protocol.md` | Scaffold, plan, and preflight | scaffold, plan |
-| `run-protocol.md` | Propose-verify-evaluate cycle, gates, evaluation rules | run |
+| `run-protocol.md` | Propose-verify-evaluate cycle, checks model, evaluation rules | run |
 | `recovery-protocol.md` | context.md maintenance, state.jsonl schema, session recovery | run |

@@ -34,7 +34,7 @@ Foreground child context:
     | Category             | What to Look For                                            |
     | -------------------- | ----------------------------------------------------------- |
     | Boundary completeness | mutable and immutable paths cover the task scope            |
-    | Verification gates   | mandatory gates have runnable commands, guard gates sensible |
+    | Checks configuration | checks have runnable commands, cost assignments sensible    |
     | Evaluation policy    | acceptance criteria are concrete and testable                |
     | Stop guards          | budget and stagnation limits are reasonable                  |
     | Implementation protocol | protocol matches the task nature                          |

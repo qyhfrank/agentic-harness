@@ -39,8 +39,6 @@ Infer from file extensions, package manifests, and framework markers. If ambiguo
 - Create `<harness_root>/.harness/` if missing
 - Derive `task_slug` and allocate `task_id` per SKILL.md Task ID Generation
 - Create `<harness_root>/.harness/tasks/<task_id>/`
-- Write `.harness-task` in the worktree root (if in a harness-managed worktree)
-- Initialize `.harness/current-task` only when it does not yet exist and this is the sole task
 
 If a task is already resolved, scaffold only fills gaps.
 
@@ -76,20 +74,24 @@ boundary:
   immutable: []
 
 implementation:
-  protocol: tdd_required
+  protocol: tdd_required    # tdd_required | tdd_preferred | direct
+
+checks:
+  # Each check: {name, command, cost} for commands, or {name, kind: review} for review gates
+  # cost: cheap (every round) | expensive (close attempt + every N rounds)
+  # Optional: probe: true for task-specific cheap probes
+  # Example:
+  # - {name: typecheck, command: "make typecheck", cost: cheap}
+  # - {name: lint, command: "ruff check .", cost: cheap}
+  # - {name: unit-tests, command: "pytest tests/unit", cost: cheap}
+  # - {name: review, kind: review}
+  # - {name: e2e, command: "pytest tests/e2e", cost: expensive}
 
 evaluation:
-  objective: satisfy
+  objective: satisfy         # satisfy | optimize
   acceptance_criteria: []
-  metric:
-    name: ""
-    direction: increase
-    volatile: false
-    samples: 3
-    min_delta: 0
-    confirmation_runs: 2
-  close_authority:
-    type: command_backed
+  close_rule: ~              # omit to auto-infer; see run-protocol.md close_rule
+  expensive_interval: 10     # run expensive checks every N rounds (in addition to close attempts)
 
 termination:
   stop_guards:
@@ -99,18 +101,7 @@ termination:
 entropy:
   doom_loop_threshold: 3
   doom_loop_action: reread_and_pivot
-  simplicity_rule: ""
   atomicity_test: "one-sentence"
-
-verification:
-  mandatory:
-    # Each gate: {type, name, command, frequency}
-    # frequency: every_round (default) | milestone | final
-  guard: []
-  escalation: []
-  architecture_guard:       # optional command gate for layer/dependency enforcement
-    # command: ""           # e.g., "python scripts/check_layers.py" or "deptrac analyse"
-    # frequency: milestone  # typically milestone, not every_round
 
 rollback:
   granularity: commit
@@ -124,17 +115,43 @@ execution_policy:
   dependency_install: prompt   # allow | deny | prompt — controls npm install, pip install, etc.
 ```
 
+When `objective: optimize`, add metric fields to the evaluation block:
+
+```yaml
+evaluation:
+  objective: optimize
+  acceptance_criteria: []
+  metric:
+    name: ""
+    direction: increase        # increase | decrease | none
+    volatile: false
+    samples: 3
+    min_delta: 0
+    confirmation_runs: 2
+  close_rule: ~
+```
+
 Pre-fill what can be inferred:
 - `implementation.protocol`: `tdd_required` for features/bugs/refactors; `direct` for config/docs
 - `evaluation.objective`: `optimize` for open-ended metric improvement; `satisfy` for concrete criteria
 - `boundary` from repo analysis when unambiguous
+- `checks`: auto-discover from repo assessment (see below)
+
+### Check Auto-Discovery
+
+From the scaffold gap report, auto-populate `checks[]`:
+- Test runner found and `ready` → add as cheap check (e.g., `{name: unit-tests, command: "pytest tests/", cost: cheap}`)
+- Linter found and `ready` → add as cheap check
+- Typecheck found and `ready` → add as cheap check
+- e2e or integration suite found → add as expensive check
+- Benchmark found and `objective: optimize` → add as expensive check or cheap probe depending on runtime cost
 
 When test infrastructure is `missing` or `partial`:
-- Pre-fill verification with cheapest available command backstops
-- Suggest `agent_review` via `/critique`
-- Set `close_authority.type` to `confirmed_review`
+- Ask the user: "No test infrastructure found. Want to add basic tests as part of this task?"
+- User says yes: add test creation to `acceptance_criteria`, pre-fill `checks` with the anticipated test command (`cost: cheap`) and a review gate.
+- User says no: add a review gate to `checks`, set `close_rule: review_streak(3)`. Note in context.md Working Memory that the task relies on review-only verification.
 
-When the task is optimize-focused and no Tier 1 probe exists, note it in context.md Working Memory.
+When `objective: optimize` and no probe check exists, note the gap in context.md Working Memory.
 
 ### 6. Generate Initial context.md
 
@@ -148,6 +165,7 @@ When the task is optimize-focused and no Tier 1 probe exists, note it in context
 - worktree: <to be set>
 - current_objective: "<goal>"
 - best_result: "baseline not recorded yet"
+- review_streak: 0
 
 ## Repository Assessment
 <gap report>
@@ -177,21 +195,28 @@ Create an empty file. Baseline event is created during preflight.
 
 ### 8. Update AGENTS.md
 
-Append a harness section (see SKILL.md Completion for the template). Do not duplicate if already present.
+Append a harness section to AGENTS.md listing the task layout (configs, state, context, artifacts paths). Do not duplicate if already present.
 
 ### 9. Report
 
 ```
 Scaffold complete.
 
+Task: <task_id>
 Harness root: /path/to/repo
-Created: config.yaml (draft), context.md, state.jsonl, .harness-task
+Created: config.yaml (draft), context.md, state.jsonl
 
 Repository assessment:
   [ready]   Test: jest (42 test files)
   [ready]   Build: npm
   [partial] Lint: eslint exists, no formatter
   [missing] CI: none found
+
+Checks auto-discovered:
+  - typecheck (cheap): npx tsc --noEmit
+  - lint (cheap): npx eslint .
+  - unit-tests (cheap): npx jest
+  - review: /critique
 
 Next: run `/harness plan` to finalize config.yaml
 ```
@@ -217,15 +242,23 @@ Walk through these sections. Ask one question at a time. Suggest concrete values
 
 **3. Implementation Protocol** — `tdd_required` (default) / `tdd_preferred` / `direct`. Explain: controls whether proposer must produce RED evidence before production code.
 
-**4. Verification Strategy** — Suggest gates from scaffold's repo assessment. Dry-run each command. Resolve failures before finalizing.
+**4. Checks Configuration** — Walk through the `checks` list:
+- Show auto-discovered checks from scaffold (lint, typecheck, test commands).
+- For each: confirm command string, confirm cost assignment (`cheap` vs `expensive`).
+- Ask: "Should we add a `/critique` review gate between cheap and expensive checks?"
+- If `objective: optimize` and no probe exists: "No task-specific probe found. Want to add a quick measurement command?"
+- Dry-run each check command. Resolve failures before finalizing.
 
-**5. Evaluation Strategy** — `satisfy` (fill acceptance_criteria) or `optimize` (fill metric). Set `close_authority`.
+**5. Evaluation Strategy** — `satisfy` (fill acceptance_criteria) or `optimize` (fill metric + volatile settings). Show inferred `close_rule`. Ask if override needed:
+- Has expensive checks: "Close requires expensive checks to pass. OK?"
+- No expensive checks: "Close requires N consecutive review passes. Adjust N?"
+- High risk: "Want to require human sign-off for closure?"
 
 **6. Stop Guards** — Budget (default 50), stagnation (default 5).
 
-**7. Entropy** — Review doom_loop defaults. "If same error 3 times, agent pivots. Adjust?"
+**7. Entropy** — Review doom_loop defaults. "If same error 3 times, agent diagnoses and pivots. Adjust?"
 
-**8. Finalize** — Vocabulary check, show complete config, dry-run gates, confirm. Remove `draft: true`. Update context.md phase.
+**8. Finalize** — Vocabulary check, show complete config, dry-run checks, confirm. Remove `draft: true`. Update context.md phase.
 
 ### Cross-Session Continuity
 
@@ -242,8 +275,8 @@ Run before entering the harness loop. On any mandatory failure, do NOT enter the
 | # | Check | Rule |
 |---|---|---|
 | 1 | Repo integrity | Git repo exists, not in detached HEAD, no stale `index.lock`. |
-| 2 | Clean working tree | No uncommitted changes. `.harness-task` is exempt. |
-| 3 | Baseline verification | All mandatory verification gates pass on current HEAD. |
+| 2 | Clean working tree | No uncommitted changes. |
+| 3 | Baseline verification | All checks (both cheap and expensive) pass on current HEAD. |
 | 4 | Scope resolution | Every path in `boundary.mutable` and `boundary.immutable` exists on disk. |
 
 On failure: report which check failed, suggest fix, do not auto-remediate.
@@ -251,7 +284,7 @@ On failure: report which check failed, suggest fix, do not auto-remediate.
 ### Baseline Recording
 
 After all checks pass:
-1. Run all mandatory verification gates against current HEAD.
+1. Run all checks against current HEAD.
 2. Evaluate baseline objective state and metric.
 3. Append a `baseline_recorded` event to `state.jsonl`.
 4. If baseline verification fails, return to plan mode.

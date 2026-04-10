@@ -1,14 +1,14 @@
 ---
 name: critique
 description: 'Use when code, plan, or config changes need structured review with source-anchored findings, such as spec checks, quality gates, plan review, or final multi-angle review. Triggers on /critique, "review this", "code review", "review the plan", "review the config", or "find blocking issues"; do not use to respond to existing review feedback after comments arrive.'
-argument-hint: <what to review> [--spec|--quality|--plan|--adversarial] [-a thinker|doer|codex|opus] [--refactor] [--model <name>] [--effort <level>]
+argument-hint: <what to review> [--spec|--quality|--plan|--adversarial] [-a thinker|doer|codex|opus] [--model <name>] [--effort <level>]
 ---
 
 Arguments: $ARGUMENTS
 
 # Critique
 
-Select profile + engine → structured findings with source anchors.
+Select profile + engine → structured findings with source anchors. `quality` and `full` always include simplify-style cleanup heuristics; `full` reserves one parallel reviewer lane for them. This adds review coverage, not `/simplify`'s fix workflow.
 
 ## Profiles and Engines
 
@@ -33,7 +33,6 @@ Arguments:
 - `--adversarial`: profile=adversarial, engine=single
 - No flag: profile=full, engine=fanout
 - `-a thinker|doer|codex|opus`: worker override for fanout engine. No flag → `/fanout` infers.
-- `--refactor`: append optional refactor proposals (full profile only)
 - `--model <name>`: model override for codex/thinker workers in fanout engine. Pass-through to `/fanout`.
 - `--effort <level>`: reasoning effort for codex/thinker workers in fanout engine. Pass-through to `/fanout`.
 
@@ -53,7 +52,7 @@ All profiles return:
 - `fail`: blocking findings exist, must address.
 - `needs_escalation`: cannot determine, needs broader context or human judgment.
 
-Coverage mandatory when verdict=pass. Single-reviewer verdicts are gate inputs, not completion oracles — inside `/harness`, a single-reviewer pass does not grant close authority.
+Coverage mandatory when verdict=pass. Single-reviewer verdicts are gate inputs, not completion oracles — inside `/harness`, a single-reviewer pass contributes to `review_streak` but does not satisfy `close_rule` on its own.
 
 ## Profile: spec
 
@@ -112,6 +111,17 @@ Over-engineering check: dedicated role under Strategy R, folded into unified pro
 - Homogeneous sampling → stability (reduce randomness).
 - Sample aggregation: main agent critically merges, filters unsupported suggestions.
 
+### Built-in Simplify Coverage
+
+- `quality` and `full` always apply simplify heuristics for reuse, duplication, abstraction bloat, and efficiency.
+- `full` always reserves one reviewer lane for simplify coverage. Under Strategy H, keep that lane and use the remaining lanes for homogeneous cross-validation.
+- `spec`, `plan`, and `adversarial` stay focused on their own gate questions. They do not emit cleanup suggestions unless the issue already rises to an `F-NNN` finding inside that profile's normal scope.
+- Simplify coverage reviews:
+  - existing helpers/utilities that should replace new duplicate logic
+  - redundant state, parameter sprawl, copy-paste variants, leaky abstractions, stringly-typed additions
+  - unnecessary work, missed concurrency, hot-path bloat, pre-check-before-operate, memory leaks, overly broad reads/loads
+- This coverage proposes the smallest useful cleanup. It does not invoke `/simplify` and does not edit code.
+
 ## Invocation Boundary
 
 - Invoked by the highest context owning final review judgment.
@@ -120,7 +130,7 @@ Over-engineering check: dedicated role under Strategy R, folded into unified pro
 
 ## Output Contract
 
-Default: output `blocking` and `near-blocking` only. `non-blocking` only when user explicitly requests.
+Default: output `blocking` and `near-blocking` only. `quality` and `full` may also append `simplify` suggestions when there is a meaningful cleanup that is real, local, and non-gating. `non-blocking` only when user explicitly requests.
 
 Finding format (all profiles):
 
@@ -149,17 +159,18 @@ Full-profile main agent verification:
 
 Rendering: markdown code block, bold field names, field order Finding → Impact → Trigger → Anchor → Minimal Fix. Pack short fields; separate long fields with blank lines. Blockquote format only when user explicitly requests.
 
-With `--refactor`, append:
+For `quality` and `full`, append simplify suggestions when present:
 
 ```markdown
-### Optional Refactor · R-001
+### S-001 · `simplify`
 
-**Proposal:** ...
-**Benefit:** ...
-**Cost:** ...
-**Risk:** ...
-**Rollback:** ...
+**Suggestion:** concrete simplification
+**Why:** short payoff
+**Anchor:** path:line
+**Minimal Change:** shortest safe cleanup
 ```
+
+`S-NNN` items do not affect the verdict unless the same issue also qualifies as an `F-NNN` finding.
 
 ## Reviewer Policy
 
@@ -187,18 +198,18 @@ Suppress findings that recommend adding abstractions, safety mechanisms, or stru
 ### Single Engine (--spec, --quality, --plan, --adversarial)
 
 1. Parse arguments, determine profile.
-2. Spawn single reviewer child context with profile's prompt template.
+2. Spawn single reviewer child context with profile's prompt template. For `quality`, the reviewer also runs simplify heuristics inline and may emit `S-NNN` suggestions.
 3. Collect verdict envelope.
-4. Main agent verifies anchors point to real source locations (lightweight check).
+4. Main agent verifies anchors point to real source locations (lightweight check), including any `S-NNN` suggestions that will be surfaced.
 5. Return verdict.
 
 ### Fanout Engine (full, default)
 
 1. Parse arguments. Pass `-a` to `/fanout` if present. If `codex` worker requested, load `/codex-exec` via Skill tool first. Pass `--model` and `--effort` to `/fanout` if specified.
 2. Load `/fanout`.
-3. Select Strategy R or H; dispatch reviewers with `-m sample` and parsed `-a` argument. When dispatching codex workers, `/fanout` auto-wraps reviewer prompts with XML blocks (`<task>`, `<grounding_rules>`, `<structured_output_contract>`) for better GPT-5.4 compatibility.
+3. Select Strategy R or H; dispatch reviewers with `-m sample` and parsed `-a` argument. Always reserve one reviewer lane for simplify coverage. When dispatching codex workers, `/fanout` auto-wraps reviewer prompts with XML blocks (`<task>`, `<grounding_rules>`, `<structured_output_contract>`) for better GPT-5.4 compatibility.
 4. Collect outputs, run sample aggregation.
-5. Main agent source-verifies all blocking findings; output `Main Verification` blocks.
+5. Main agent source-verifies all blocking findings and any surfaced `S-NNN` suggestions; output `Main Verification` blocks for `F-NNN` findings.
 6. Return verdict envelope.
 
 ## Reference Index
