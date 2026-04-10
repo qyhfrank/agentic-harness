@@ -8,14 +8,13 @@ Arguments: $ARGUMENTS
 
 # Critique
 
-Structured review with source-anchored findings. One reviewer, one verdict.
+Structured review with source-anchored findings.
 
 ## Profiles
 
-- `--quality` (default): Does implementation match requirements, and is it clean, tested, maintainable?
-- `--plan`: Is this plan complete, coherent, and ready to execute?
-
-For multi-angle review, use `/fanout` with `/critique`.
+- No flag (default): Multi-angle review — load `/fanout`, dispatch multiple reviewers with dynamically generated roles and focus angles using the quality review checklist.
+- `--quality`: Single reviewer, quality + spec compliance.
+- `--plan`: Single reviewer, plan/config artifact.
 
 ## Verdict Envelope
 
@@ -82,8 +81,17 @@ Spawn a single reviewer child context with the planning artifact and goal/spec r
 
 ## Execution
 
-1. Parse arguments, determine profile.
-2. Spawn single reviewer child context with the profile's checklist.
-3. Collect verdict envelope.
-4. Verify finding anchors point to real source locations.
-5. Return verdict.
+### Single Reviewer (--quality, --plan)
+
+1. Spawn single reviewer child context with the profile's checklist.
+2. Collect verdict envelope.
+3. Verify finding anchors point to real source locations.
+4. Return verdict.
+
+### Multi-Angle (default, no flag)
+
+1. Load `/fanout`, dispatch reviewers with `-m sample`.
+2. Dynamically generate reviewer roles and focus angles based on the diff.
+3. Collect outputs, critically merge findings.
+4. Source-verify all blocking findings.
+5. Return verdict envelope.
