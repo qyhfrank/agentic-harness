@@ -156,6 +156,8 @@ Do NOT invoke writing-plans, executing-plans, or any other implementation skill 
 
 When invoked by another skill (e.g. `/harness` setup), brainstorming runs in **embedded mode**. The exploration process is the same — understand context, ask clarifying questions, propose approaches — but the output is structured data instead of a spec document.
 
+When the caller is `/harness setup`, embedded mode owns the design exchange. Do not write a design doc, create a git commit, or trigger the standalone review gate. If the conversation started in standalone brainstorming but the user then routes the task into `/harness`, stop the standalone artifact flow and return control to harness.
+
 ### Output Schema
 
 Embedded mode produces a YAML block that the caller consumes directly. All fields are advisory — the caller decides which to adopt.
@@ -169,7 +171,7 @@ boundary_hints:
   immutable:
     - "<file or directory path>"
 
-protocol_hint: direct        # direct | tdd_required | tdd_preferred
+protocol_hint: direct        # direct | tdd_preferred | tdd_required
 
 check_hints:                 # suggested verification checks
   - name: "<check name>"
@@ -193,7 +195,7 @@ Field mapping to harness state files:
 |---|---|---|
 | `goal` | `config.yaml task.description` | Replaces raw user input with refined statement |
 | `boundary_hints` | `config.yaml boundary` | Setup Step 3 finalizes; hints may be expanded or narrowed |
-| `protocol_hint` | `config.yaml task.protocol` | Suggestion based on codebase and task fit |
+| `protocol_hint` | `config.yaml task.protocol` | Suggestion based on task fit; use `tdd_preferred` when fail-first should be the default and can be proven with an automated test or the smallest reproducible script, `tdd_required` when behavior-changing implementation rounds must prove that failing reproduction before code |
 | `check_hints` | `config.yaml checks[]` | At least 1 check required; setup adds/adjusts |
 | `milestones` | `plan.yaml milestones[]` | Bootstrap Strategy may restructure; approach scores are starting points |
 
