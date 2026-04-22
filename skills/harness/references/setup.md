@@ -5,15 +5,15 @@
 - Goal unclear -> ask before writing task state
 - Broad intent -> narrow to a verifiable bug, feature, coverage target, metric target, or other decidable outcome
 
-### Embedded Brainstorming (optional)
+## Step 2: Explore Requirements (optional)
 
-When the goal involves creative work (new feature, behavior change, architectural decision) and any of these apply, dispatch `/brainstorming` in embedded mode before proceeding to Step 2:
+When the goal involves creative work (new feature, behavior change, architectural decision) and any of these apply, dispatch `/brainstorming` in embedded mode before proceeding to Step 3:
 
 - User's goal description is broad or has multiple valid interpretations
 - The task requires choosing between 2+ distinct approaches
 - Scope boundaries are unclear (what's in vs. out)
 
-Skip embedded brainstorming when the goal is already narrow and verifiable (specific bug fix, mechanical refactor, metric optimization with clear target).
+Skip when the goal is already narrow and verifiable (specific bug fix, mechanical refactor, metric optimization with clear target).
 
 **Dispatch preamble:**
 
@@ -28,17 +28,17 @@ goal: "<raw user goal>"
 
 | Brainstorming output | Setup action |
 |---|---|
-| `goal` | Use as refined `task.description` in Step 3 |
-| `boundary_hints` | Pre-populate `boundary` defaults for Step 3 confirmation |
-| `protocol_hint` | Pre-populate `task.protocol` default for Step 3 confirmation |
-| `check_hints` | Pre-populate `checks[]` defaults for Step 3 confirmation |
+| `goal` | Use as refined `task.description` in Step 4 |
+| `boundary_hints` | Pre-populate `boundary` defaults for Step 4 confirmation |
+| `protocol_hint` | Pre-populate `task.protocol` default for Step 4 confirmation |
+| `check_hints` | Pre-populate `checks[]` defaults for Step 4 confirmation |
 | `milestones` | Pass to Bootstrap Strategy (run initialization) as seed decomposition |
 
-All values remain advisory until Step 3 finalizes them. The user confirms or overrides each field during contract finalization.
+All values remain advisory until Step 4 finalizes them. The user confirms or overrides each field during contract finalization.
 
 **Milestone handoff:** When brainstorming produces `milestones`, Bootstrap Strategy uses them as the starting decomposition instead of generating from scratch. It may restructure (split, reorder, insert prerequisites) but should preserve the user-validated approach rankings.
 
-## Step 2: Understand the Codebase
+## Step 3: Understand the Codebase
 
 Read business code, understand architecture and relevant paths, scan infrastructure affecting `config.yaml` and `checks[]`. If the task turns out more complex than expected, return to Step 1 to adjust the goal with the user.
 
@@ -48,7 +48,7 @@ Read business code, understand architecture and relevant paths, scan infrastruct
 - Verification suites: bench, perf, e2e, integration, smoke
 - Golden path commands: Makefile targets, package scripts, project scripts
 
-## Step 3: Finalize the Contract
+## Step 4: Finalize the Contract
 
 Ask before writing the contract. Default values may be suggested upfront, but fields that change behavior must not be guessed. If an unresolved answer would change `boundary`, `checks`, `evaluation`, `termination`, `rollback`, or `execution_policy`, stay in setup.
 
@@ -87,7 +87,7 @@ Must finalize:
 
 `reading` can be a command or precise executable steps; the key is determinism, not enforcing a fixed stdout format.
 
-## Step 4: Write Task State
+## Step 5: Write Task State
 
 ### `setup:new`
 
@@ -117,7 +117,7 @@ Reuse existing `task_id` and task directory. Do not delete existing files or art
 - `context.md`: no run events -> reset to `setup:new` initial snapshot; has run events -> fill in missing fields only, do not reset
 - `state.jsonl`: create as empty file only if missing; leave alone if it already exists
 
-## Step 5: Hand Off to Run
+## Step 6: Hand Off to Run
 
 Setup is done when all of these hold:
 
