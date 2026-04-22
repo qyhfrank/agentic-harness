@@ -27,7 +27,21 @@ sub = "https://github.com/org/monorepo/tree/main/plugins/sub"
 
 # Structured form with explicit ref/subdir
 pinned = { url = "https://github.com/org/repo.git", ref = "v1.0", subdir = "plugins/foo" }
+
+# Subtree mode (requires ASB_HOME to be a git repo; falls back to clone otherwise)
+my-subtree = { url = "https://github.com/org/repo.git", type = "subtree" }
 ```
+
+### Source Type
+
+Remote sources support two integration types via the `type` field:
+
+| Type      | Default | Behavior | Requirement |
+|:----------|:--------|:---------|:------------|
+| `clone`   | Yes     | `git clone` into `plugins/<name>/` as separate repo | None |
+| `subtree` | No      | `git subtree add/pull` into parent repo | ASB_HOME must be a git repo |
+
+When `type = "subtree"` is set but ASB_HOME is not a git repo, falls back to clone automatically.
 
 ### Source Kind Detection
 

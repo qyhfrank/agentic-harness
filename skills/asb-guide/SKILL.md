@@ -21,9 +21,8 @@ Alias: `asb`. Install: `npm i -g agent-switchboard`.
 ├── agents/                    # Agent .md files
 ├── skills/                    # Skill directories (each with SKILL.md)
 ├── hooks/                     # Hook .json files or bundle dirs
-├── plugins/                   # Auto-discovered local plugins
-├── extensions/                # Extension modules (.mjs/.js)
-└── .source-cache/             # Git-cloned plugin source cache
+├── plugins/                   # Auto-discovered local plugins & cloned sources
+└── extensions/                # Extension modules (.mjs/.js)
 
 <project>/.asb.toml            # Project-level config layer
 ```
@@ -111,6 +110,8 @@ local-lib = "/absolute/path/to/library"
 mono-sub = "https://github.com/org/monorepo/tree/main/plugins/sub"
 # Also accepts structured form:
 # remote = { url = "https://...", ref = "v1.0", subdir = "plugins/foo" }
+# type: "clone" (default, clones into plugins/) or "subtree" (git subtree, requires ASB_HOME to be a git repo)
+# subtree-plugin = { url = "https://...", type = "subtree" }
 
 [plugins.exclude]
 commands = ["context7:docs"]       # cherry-pick: exclude specific components
