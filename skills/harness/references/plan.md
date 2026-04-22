@@ -41,6 +41,38 @@ Steps are generated alongside the approach during bootstrap or replan. They may 
 
 When `current_step >= len(steps)` but milestone `exit_criteria` is not met: fall back to hypothesis-level Propose (ignore steps, scope round to the approach hypothesis directly). If the next round also fails to advance toward exit_criteria, treat as normal adapt logic (demote/failed based on failure_scope).
 
+### Step content standards
+
+Not every approach needs high-precision steps. Generate tactical steps when:
+
+- The approach creates or modifies 2+ files
+- Changes require a specific sequence to stay green
+- `task.protocol` is `tdd_required` or `tdd_preferred`
+
+For single-file changes or exploratory spikes, short descriptive steps suffice.
+
+**Per-step requirements** (when tactical):
+
+1. **Files touched** — exact repo-relative paths; distinguish create vs modify
+2. **Content** — code blocks for code steps; no prose-only descriptions
+3. **Verification** — command + expected outcome (pass/fail pattern)
+
+Granularity: one action per step. If a description needs "and", split it. Target: each step = one harness round.
+
+**File mapping:** Before generating steps, list all files the approach will touch. This locks scope; no file appears in a step that wasn't listed.
+
+**TDD rhythm** (when `tdd_required` or `tdd_preferred`): write failing test → verify failure → write minimal implementation → verify pass. See `references/tdd-discipline.md` for test quality anti-patterns.
+
+**Propose expansion:** Steps stored in plan.yaml stay as short strings. During Propose, the agent expands the current step into a full round with file paths, code blocks, and verification commands per the requirements above.
+
+**No-placeholder rules** — these patterns in step expansions are failures:
+
+- "TBD", "TODO", "implement later", "fill in details"
+- "Add appropriate error handling" / "add validation" / "handle edge cases"
+- "Write tests for the above" without actual test code
+- "Similar to step N" (repeat the content; each round is self-contained)
+- Prose-only code steps; references to undefined types or functions
+
 Example:
 
 ```yaml

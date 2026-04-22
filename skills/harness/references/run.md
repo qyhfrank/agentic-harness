@@ -124,7 +124,7 @@ After Preflight passes:
 After Baseline passes:
 
 1. Decompose goal into 2-5 ordered milestones with verifiable `exit_criteria`
-2. For the first active milestone, generate 2-3 ranked approaches (initial score spread >= 15); when an approach warrants tactical steps, generate them per `references/tactical-planning.md`
+2. For the first active milestone, generate 2-3 ranked approaches (initial score spread >= 15); when an approach warrants tactical steps, generate them per `references/plan.md` step content standards
 3. Write `plan.yaml` with `strategy.status: active`, `active_milestone_id: M1`
 4. Emit `strategy_updated(reason=bootstrap, trigger=initial)`
 5. Update `context.md`: `active_milestone`, `active_approach`, `version`
@@ -138,7 +138,7 @@ After Baseline passes:
 - If `steps[]` exhausted (`current_step >= len(steps)`) or empty: scope to the approach `hypothesis`
 - Scan `Durable Notes` for `[dead-end]`, `[constraint]` relevant to this milestone/approach
 - Non-trivial changes: converge on approach first; invoke `/brainstorming` when needed
-- When expanding a step into a round, follow `references/tactical-planning.md` for content standards (file mapping, code blocks, verification commands, no-placeholder rules)
+- When expanding a step into a round, follow `references/plan.md` step content standards (file mapping, code blocks, verification commands, no-placeholder rules)
 - Obey `task.protocol` and `execution_policy` (`dangerous_commands` require human approval; `secret_patterns` never read or staged)
 - When `task.protocol` is `tdd_required` or `tdd_preferred`, load `references/tdd-discipline.md`
 - One atomic round at a time; if the description needs "and" to explain, split into multiple rounds
