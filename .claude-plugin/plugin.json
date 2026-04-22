@@ -1,0 +1,17 @@
+{
+  "name": "agentic-dev",
+  "description": "Agentic development workflow: autonomous iteration with verified feedback loops, structured debugging, design-first brainstorming, and multi-agent plan execution.",
+  "version": "1.0.0",
+  "author": {
+    "name": "HKU System Group"
+  },
+  "keywords": [
+    "harness",
+    "autonomous-iteration",
+    "tdd",
+    "debugging",
+    "code-review",
+    "multi-agent",
+    "plan-execution"
+  ]
+}
