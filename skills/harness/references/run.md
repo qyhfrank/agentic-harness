@@ -1,6 +1,6 @@
 # Run
 
-initialize -> [propose -> cleanup -> commit -> verify -> evaluate -> adapt -> record -> replan-check -> stop-check]* -> disposition
+initialize -> [propose -> cleanup -> commit -> verify -> evaluate -> investigate? -> adapt -> record -> replan-check -> stop-check]* -> disposition
 
 ## State Schema
 
@@ -142,6 +142,7 @@ After Baseline passes:
 - Obey `task.protocol` and `execution_policy` (`dangerous_commands` require human approval; `secret_patterns` never read or staged)
 - When `task.protocol` is `tdd_required` or `tdd_preferred`, load `references/tdd-discipline.md`
 - One atomic round at a time; if the description needs "and" to explain, split into multiple rounds
+- **Post-revert guard:** if the previous round was `reverted`, this round's proposal must state the single hypothesis being tested and cite evidence from the failed round. Without both, investigate first — do not generate a patch
 
 ### Cleanup
 
@@ -185,6 +186,27 @@ Metric runtime (optimize):
 - `best_value`: best `metric.value` among baseline and historical `kept` events; frontier updated only on `kept`
 - `target`: increase = `best_value >= target`, decrease = `best_value <= target`
 - `reading` cannot yield a unique float -> `escalated` (reason: `escalation`)
+
+### Investigate (conditional)
+
+Runs between Evaluate and Adapt only when `evaluation.result = reverted` and any of these hold:
+
+- Same step or failure family reverted a second time
+- `failure_scope` is ambiguous (cannot confidently classify as `execution`)
+- Failure spans multiple components or a deep call chain
+- Error symptoms are migrating across rounds
+
+Skip when cause is self-evident: `hook_blocked`, obvious typo/wrong file, `below_threshold` in optimize mode.
+
+Produce 5 fields before entering Adapt:
+
+1. `observed_failure` — which check failed and the exact error
+2. `reproduction` — minimal command or steps to trigger the failure
+3. `suspected_layer` — where in the call chain the bad value originates
+4. `working_vs_broken_diff` — what differs from a working path or reference
+5. `single_hypothesis` — one falsifiable explanation for the failure
+
+Write these to `artifacts/round-{N}/investigation.md` and reference in `Durable Notes`. Adapt uses this investigation to classify `failure_scope` with evidence, rather than defaulting to `execution` on ambiguity.
 
 ### Adapt
 
@@ -232,6 +254,12 @@ Same check fails with same error pattern N times (`doom_loop_threshold`) within 
 3. Fanout candidates become new approaches in current milestone (initial `score: 40`, `status: candidate`)
 4. Subsequent rounds consume candidates through normal lifecycle
 5. All exhausted -> `strategy_signal = all_approaches_exhausted` -> triggers replan
+
+### Architecture escalation (strategy-level)
+
+Separate from doom loop. Triggers when the current milestone accumulates 3+ reverted rounds covering 2 or more distinct failure families, or when each successive fix exposes coupling in a different location. This pattern suggests the problem is architectural, not tactical.
+
+Action: `escalated` for human architecture review. Do not continue with fanout or replan — the milestone's framing may be wrong.
 
 ### Replan Protocol
 
