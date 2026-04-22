@@ -61,7 +61,10 @@ Granularity: one action per step. If a description needs "and", split it. Target
 
 **File mapping:** Before generating steps, list all files the approach will touch. This locks scope; no file appears in a step that wasn't listed.
 
-**TDD rhythm** (when `tdd_required` or `tdd_preferred`): write failing test → verify failure → write minimal implementation → verify pass. See `references/tdd-discipline.md` for test quality anti-patterns.
+**TDD rhythm** (when `tdd_required` or `tdd_preferred`): capture failing reproduction → verify failure → write minimal implementation → verify pass. See `references/tdd-discipline.md` for fail-first rules and test quality anti-patterns.
+
+- `tdd_required`: if the step changes production behavior, the step expansion must name the failing reproduction, the proof command, and where the RED evidence will be recorded before implementation.
+- `tdd_preferred`: use the same rhythm by default; if a step is pure docs, config, or other non-behavior work, note why the TDD overlay does not apply in `Decisions`.
 
 **Propose expansion:** Steps stored in plan.yaml stay as short strings. During Propose, the agent expands the current step into a full round with file paths, code blocks, and verification commands per the requirements above.
 

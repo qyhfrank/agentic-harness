@@ -29,7 +29,7 @@ Never write `.harness/` or task state inside a worktree.
 
 First match wins:
 
-1. `task_disposed` or `round: N / stopped` -> report final summary, do not resume loop
+1. `task_disposed` -> report final summary, do not resume loop
 2. `harness_stopped` in `state.jsonl` without `task_disposed` -> report stop reason and last round summary, present disposition options, do not enter round lifecycle
 3. No resolved task -> **setup:new** -> Load `references/setup.md`
 4. Task files incomplete, contract not fully specified, or `plan.yaml` missing -> **setup:repair** -> Load `references/setup.md` (missing plan.yaml with recorded events: repair builds active plan from goal + ledger pointers)
@@ -39,6 +39,7 @@ First match wins:
 
 - `/harness setup`: route to setup, stop after writing task state.
 - Bare `/harness`: continue into run after successful setup.
+- `context.md` may mirror stopped/disposed state for humans, but route from ledger events, not display text.
 
 ## Global Invariants
 

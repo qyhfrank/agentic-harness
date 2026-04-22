@@ -75,6 +75,7 @@ Invariants:
 - `task_disposed`, if present, appears exactly once and must be the last event; must follow `harness_stopped`
 - `kept|done` requires `verification.status: pass`
 - `strategy_updated` may follow any `round_completed` or `baseline_recorded`; `version` strictly increments on `reason: replan`
+- final task completion is encoded as `evaluation.result: done` with `controller.approach_decision: task_done`; do not encode terminal completion as `kept + strategy_signal: done`
 - `state.jsonl` = event truth; `context.md` = live working state
 
 ### `plan.yaml`
@@ -140,7 +141,10 @@ After Baseline passes:
 - Non-trivial changes: converge on approach first; invoke `/brainstorming` when needed
 - When expanding a step into a round, follow `references/plan.md` step content standards (file mapping, code blocks, verification commands, no-placeholder rules)
 - Obey `task.protocol` and `execution_policy` (`dangerous_commands` require human approval; `secret_patterns` never read or staged)
-- When `task.protocol` is `tdd_required` or `tdd_preferred`, load `references/tdd-discipline.md`
+- When `task.protocol` is `tdd_required` or `tdd_preferred`, or the current round writes tests, fixtures, or mocks, load `references/tdd-discipline.md`
+- When `task.protocol = tdd_required` and the round changes production behavior, execute the RED proof before patching and record the failing reproduction, proof command, and failure evidence in `Decisions` or `artifacts/round-{N}/manifest.json`
+- When `task.protocol = tdd_preferred`, do the same by default; for pure docs, config, or other non-behavior rounds, record the skip reason in `Decisions` before generating the patch
+- Keep the implementation boundary minimal after RED evidence is recorded
 - One atomic round at a time; if the description needs "and" to explain, split into multiple rounds
 - **Post-revert guard:** if the previous round was `reverted`, this round's proposal must state the single hypothesis being tested and cite evidence from the failed round. Without both, investigate first — do not generate a patch
 
@@ -161,7 +165,9 @@ Execute by `cost` group: `cheap -> medium -> expensive`, in list order within ea
 
 Checks with `action` starting with `/` are dispatched as skill calls; verdict written to `verification.gates` (`pass` / `fail` / `escalated`). Map skill verdict `needs_escalation` to gate value `escalated`.
 
-Evidence: stdout/stderr + `artifacts/round-{N}/manifest.json`. Short-circuited checks are not written to gates.
+Run checks exactly as written in `config.yaml`. If a check's command, order, or membership changes, update `config.yaml` before Verify runs.
+
+Evidence: stdout/stderr + `artifacts/round-{N}/manifest.json`. Manifest verification entries list only executed checks, and each `command` matches the configured `action`. Short-circuited checks are omitted. Any other skip needs an explicit recorded reason, or the round escalates as contract drift.
 
 ### Evaluate
 
@@ -216,17 +222,19 @@ Translate round verdict into plan-level actions. See `references/plan.md` for th
 2. Update approach: `attempts++`, adjust `revert_streak` and `score` per delta table
 3. If `kept` and approach has `steps[]`: advance `current_step` when sub-goal is met
 4. Determine `approach_decision` and `strategy_signal`
-4. If `approach_decision = failed`: mark approach, activate highest-score candidate
-5. If no candidates remain: `strategy_signal = all_approaches_exhausted`
-6. If `approach_decision = complete`: mark milestone done, advance to next pending milestone; emit `strategy_updated(reason=advance, trigger=milestone_done)`
-7. If `evaluation.result = done`: set `strategy.status = done`, mark current milestone and approach as `done`
-8. Update `plan.yaml`
+5. If `approach_decision = failed`: mark approach, activate highest-score candidate
+6. If no candidates remain: `strategy_signal = all_approaches_exhausted`
+7. If `approach_decision = complete`: mark milestone done, advance to next pending milestone; emit `strategy_updated(reason=advance, trigger=milestone_done)`
+8. If `evaluation.result = done`: set `strategy.status = done`, mark current milestone and approach as `done`, set `approach_decision = task_done`, and keep `strategy_signal = none`
+9. Update `plan.yaml`
 
-`evaluation.result = done` is reserved for final task completion. Milestone completion uses `kept` + `approach_decision = complete`. `approach_decision` maps to `approach.status`: `failed → failed`, `blocked → blocked`, `complete → done`.
+`evaluation.result = done` pairs with `approach_decision = task_done`. Milestone completion uses `kept + approach_decision = complete`. `approach_decision` maps to `approach.status`: `failed → failed`, `blocked → blocked`, `complete → done`.
 
 ### Record
 
 Update `state.jsonl` (append event) and `context.md` (round state, objective, best_result, Next Steps). Write `artifacts/round-{N}/` evidence.
+
+Decision-only rounds are allowed when no code or config change is needed and `HEAD` stays unchanged. They still write `artifacts/round-{N}/manifest.json` with `changed_files: []` and a note saying whether verification reran or was reused from the prior unchanged commit.
 
 ## Stop Conditions
 
@@ -277,7 +285,7 @@ Action: `escalated` for human architecture review. Do not continue with fanout o
 1. Freeze all `status: done` milestones. Never rewrite completed prefix.
 2. Suffix-only: rewrite active + pending milestones. Allowed ops: split, reorder, drop, insert prerequisite.
 3. Generate 2-3 ranked approaches for affected milestones.
-4. `strategy.version += 1`, emit `strategy_updated(reason=replan, trigger=<matching trigger>)`.
+4. `strategy.version += 1`, emit `strategy_updated(reason=replan, trigger=<matching trigger>)`. When the trigger is `new_constraint` or `stagnation`, cite the triggering check, artifact path, or Durable Note tag in `summary`.
 
 **Anti-thrash**: at least 1 completed round between replans; only hard triggers (`new_constraint`, `escalated`) bypass cooldown.
 
@@ -285,10 +293,34 @@ Action: `escalated` for human architecture review. Do not continue with fanout o
 
 After user selects `merge|keep|discard`:
 
-- **`merged`** (worktree mode only): squash-merge back to `task.base_branch` (Conventional Commits), delete branch and worktree
+- **`merged`** (worktree mode only): organize changes into logical commits on `task.base_branch`, delete branch and worktree. See **Commit organization** below.
 - **`kept`**: preserve final code state; worktree mode reports path + branch, in-place preserves current state
 - **`discarded`**: worktree mode deletes branch + worktree; in-place reverts to `baseline_recorded.commit` (**requires explicit user confirmation**)
 
 `.harness/` is always preserved.
+
+### Commit organization
+
+Merge result = clean intentional history, not working-state dumps.
+
+**Grouping** — milestone → commit:
+
+1. Diff worktree against `base_branch`
+2. Map changed files/hunks to their milestone (`plan.yaml` scope and step file-lists as primary signal)
+3. Cross-cutting changes (config, deps, shared types) attach to the milestone that introduced them
+4. One milestone = one commit when cohesive. Split only for clearly separable concerns within a milestone
+
+Single-milestone tasks produce one commit.
+
+**Sequence** — present commit plan for user confirmation before executing:
+
+```
+Proposed commits (oldest → newest):
+  1. feat(auth): add token refresh logic          — M1
+  2. test(auth): add refresh edge-case coverage   — M2
+  3. fix(api): handle expired session in middleware — M3
+```
+
+User confirms or requests re-grouping. Execute: reset worktree to `base_branch`, apply commits in order (Conventional Commits), fast-forward `base_branch`.
 
 After applying: append `task_disposed` to `state.jsonl`; update `context.md` (`round: N / stopped`, `last_action`: final summary, clear `Next Steps`).

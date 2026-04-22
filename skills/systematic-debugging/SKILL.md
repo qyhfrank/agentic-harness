@@ -171,22 +171,26 @@ You MUST complete each phase before proceeding to the next.
 
 **Fix the root cause, not the symptom:**
 
-1. **Create Failing Test Case**
+1. **Create Failing Reproduction**
    - Simplest possible reproduction
    - Automated test if possible
    - One-off test script if no framework
    - MUST have before fixing
+   - It must fail for the expected reason before you change code
+   - If the surrounding workflow keeps round evidence, record the failing reproduction, proof command, and failure evidence before patching
 
 2. **Implement Single Fix**
    - Address the root cause identified
+   - Make the smallest change that fixes that root cause
    - ONE change at a time
    - No "while I'm here" improvements
    - No bundled refactoring
 
 3. **Verify Fix**
-   - Test passes now?
+   - The failing reproduction now passes
    - No other tests broken?
    - Issue actually resolved?
+   - Keep regression coverage when automation is possible
 
 4. **If Fix Doesn't Work**
    - STOP

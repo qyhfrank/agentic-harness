@@ -55,7 +55,7 @@ Ask before writing the contract. Default values may be suggested upfront, but fi
 Finalize in this order:
 
 1. `boundary.mutable` and `boundary.immutable`
-2. `task.protocol` (default `direct`; when codebase and task fit TDD, ask the user whether to use `tdd_required`)
+2. `task.protocol` (default `direct`; when behavior-changing work can be proven with a failing test or the smallest reproducible script, ask the user whether to use `tdd_preferred` or `tdd_required`)
 3. `checks[]`
 4. `evaluation.objective` (discrete acceptance defaults to `satisfy`; metric improvement defaults to `optimize`)
 5. `evaluation.metric.*` (only when objective is `optimize`; target defaults to unset, optimize continuously until budget or stagnation)
@@ -68,6 +68,7 @@ Each check shape: `{name, action, cost: cheap|medium|expensive}`.
 - `action`: command or skill to execute (e.g., shell command, `/critique -a gpt-5.4:6`)
 - `cost`: determines execution order (`cheap -> medium -> expensive`)
 - `checks[]` must contain at least 1 check before setup completes
+- `checks[]` is the runtime verification contract. After setup, change the command, order, or membership in `config.yaml` before Verify uses the new shape.
 
 Example: `{name: unit-tests, action: "pytest tests/", cost: cheap}`
 
@@ -90,6 +91,12 @@ Must finalize:
 `reading` can be a command or precise executable steps; the key is determinism, not enforcing a fixed stdout format.
 
 ## Step 5: Write Task State
+
+Choose the `.harness/` location before creating task state:
+
+- Single-repo task -> confirm a task-state location that does not create tracked repo surface; prefer a repo-adjacent or otherwise established local location over inventing a new in-worktree state dir
+- Multi-repo or cross-worktree task -> place `.harness/` under the nearest common parent directory of the touched repos/worktrees
+- Do not default to the currently open repo just because setup is being run from there
 
 ### `setup:new`
 
@@ -132,7 +139,7 @@ After setup handoff, run initialization will bootstrap the strategy (decompose g
 ## Appendix A: Canonical `config.yaml` Skeleton
 
 ```yaml
-task: { id: "<task_id>", description: "<goal from user>", protocol: direct, base_branch: "<branch>" }  # direct|tdd_required|tdd_preferred; base_branch = branch active at setup time
+task: { id: "<task_id>", description: "<goal from user>", protocol: direct, base_branch: "<branch>" }  # direct|tdd_preferred|tdd_required; direct = no TDD overlay, preferred = fail-first by default, required = fail-first required for behavior-changing implementation rounds
 
 boundary: { mutable: [], immutable: [] }  # repo-root-relative path list; directories mean the full subtree; no globs
 
