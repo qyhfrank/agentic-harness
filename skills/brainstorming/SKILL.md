@@ -29,7 +29,7 @@ You MUST create a task for each of these items and complete them in order:
 6. **Write design doc** — save to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` and commit
 7. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
 8. **User reviews written spec** — ask user to review the spec file before proceeding
-9. **Transition to implementation** — invoke writing-plans skill to create implementation plan
+9. **Transition to next step** — offer the user a choice: hand off to `/harness` for adaptive execution, or stop here (user decides next step independently)
 
 ## Process Flow
 
@@ -45,7 +45,9 @@ digraph brainstorming {
     "Write design doc" [shape=box];
     "Spec self-review\n(fix inline)" [shape=box];
     "User reviews spec?" [shape=diamond];
-    "Invoke writing-plans skill" [shape=doublecircle];
+    "Next step?" [shape=diamond];
+    "Hand off to /harness" [shape=doublecircle];
+    "Stop\n(user decides)" [shape=doublecircle];
 
     "Explore project context" -> "Visual questions ahead?";
     "Visual questions ahead?" -> "Offer Visual Companion\n(own message, no other content)" [label="yes"];
@@ -59,11 +61,13 @@ digraph brainstorming {
     "Write design doc" -> "Spec self-review\n(fix inline)";
     "Spec self-review\n(fix inline)" -> "User reviews spec?";
     "User reviews spec?" -> "Write design doc" [label="changes requested"];
-    "User reviews spec?" -> "Invoke writing-plans skill" [label="approved"];
+    "User reviews spec?" -> "Next step?" [label="approved"];
+    "Next step?" -> "Hand off to /harness" [label="execute with harness"];
+    "Next step?" -> "Stop\n(user decides)" [label="stop here"];
 }
 ```
 
-**The terminal state is invoking writing-plans.** Do NOT invoke frontend-design, mcp-builder, or any other implementation skill. The ONLY skill you invoke after brainstorming is writing-plans.
+**Terminal states:** After the user approves the spec, offer two options: hand off to `/harness` for adaptive execution, or stop (user decides next step). Do NOT invoke writing-plans, frontend-design, mcp-builder, or any other implementation skill directly.
 
 ## The Process
 
@@ -130,10 +134,14 @@ After the spec review loop passes, ask the user to review the written spec befor
 
 Wait for the user's response. If they request changes, make them and re-run the spec review loop. Only proceed once the user approves.
 
-**Implementation:**
+**Next step:**
 
-- Invoke the writing-plans skill to create a detailed implementation plan
-- Do NOT invoke any other skill. writing-plans is the next step.
+After the user approves the spec, present two options:
+
+1. **Hand off to `/harness`** — invoke `/harness` with the spec as context for adaptive execution
+2. **Stop here** — the user decides what to do next (manual implementation, hand off to someone else, etc.)
+
+Do NOT invoke writing-plans, executing-plans, or any other implementation skill directly.
 
 ## Key Principles
 
@@ -143,6 +151,82 @@ Wait for the user's response. If they request changes, make them and re-run the 
 - **Explore alternatives** - Always propose 2-3 approaches before settling
 - **Incremental validation** - Present design, get approval before moving on
 - **Be flexible** - Go back and clarify when something doesn't make sense
+
+## Embedded Mode
+
+When invoked by another skill (e.g. `/harness` setup), brainstorming runs in **embedded mode**. The exploration process is the same — understand context, ask clarifying questions, propose approaches — but the output is structured data instead of a spec document.
+
+### Output Schema
+
+Embedded mode produces a YAML block that the caller consumes directly. All fields are advisory — the caller decides which to adopt.
+
+```yaml
+goal: "<refined, verifiable goal statement>"
+
+boundary_hints:
+  mutable:
+    - "<file or directory path>"
+  immutable:
+    - "<file or directory path>"
+
+protocol_hint: direct        # direct | tdd_required | tdd_preferred
+
+check_hints:                 # suggested verification checks
+  - name: "<check name>"
+    action: "<shell command or skill call>"
+    cost: cheap              # cheap | medium | expensive
+
+milestones:                  # goal decomposition (2-5 ordered milestones)
+  - title: "<milestone title>"
+    objective: "<what this milestone achieves>"
+    exit_criteria: "<verifiable condition>"
+    approaches:
+      - hypothesis: "<approach description and rationale>"
+        score: 70            # 0-100; spread >= 15 between ranks
+      - hypothesis: "<alternative approach>"
+        score: 55
+```
+
+Field mapping to harness state files:
+
+| Output field | Harness target | Notes |
+|---|---|---|
+| `goal` | `config.yaml task.description` | Replaces raw user input with refined statement |
+| `boundary_hints` | `config.yaml boundary` | Setup Step 3 finalizes; hints may be expanded or narrowed |
+| `protocol_hint` | `config.yaml task.protocol` | Suggestion based on codebase and task fit |
+| `check_hints` | `config.yaml checks[]` | At least 1 check required; setup adds/adjusts |
+| `milestones` | `plan.yaml milestones[]` | Bootstrap Strategy may restructure; approach scores are starting points |
+
+### Embedded Checklist
+
+Embedded mode runs a subset of the standalone checklist. Steps marked with *skip* are the caller's responsibility.
+
+1. **Explore project context** — same as standalone
+2. **Ask clarifying questions** — same as standalone (one at a time, multiple choice preferred)
+3. **Propose 2-3 approaches** — same as standalone (with trade-offs and recommendation)
+4. **Produce output YAML** — emit the structured output block above; do not write a spec document
+
+Skipped in embedded mode:
+- Visual Companion (caller manages its own UI)
+- Design doc writing and git commit
+- Spec self-review
+- User review gate (caller handles approval through its own contract flow)
+- Terminal invocation of writing-plans or any other skill
+
+The caller receives the YAML output and resumes its own workflow. Brainstorming does not control what happens next.
+
+### Mode Detection
+
+Embedded mode activates when the caller's prompt includes `mode: embedded` in the opening context. Example preamble from a harness setup call:
+
+```
+mode: embedded
+task_id: 002-example-task
+caller: /harness setup
+goal: "<raw user goal>"
+```
+
+When this preamble is present, follow the Embedded Checklist. When absent, follow the standalone Checklist (steps 1-9).
 
 ## Visual Companion
 

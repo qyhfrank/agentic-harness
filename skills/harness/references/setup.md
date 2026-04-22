@@ -5,6 +5,39 @@
 - Goal unclear -> ask before writing task state
 - Broad intent -> narrow to a verifiable bug, feature, coverage target, metric target, or other decidable outcome
 
+### Embedded Brainstorming (optional)
+
+When the goal involves creative work (new feature, behavior change, architectural decision) and any of these apply, dispatch `/brainstorming` in embedded mode before proceeding to Step 2:
+
+- User's goal description is broad or has multiple valid interpretations
+- The task requires choosing between 2+ distinct approaches
+- Scope boundaries are unclear (what's in vs. out)
+
+Skip embedded brainstorming when the goal is already narrow and verifiable (specific bug fix, mechanical refactor, metric optimization with clear target).
+
+**Dispatch preamble:**
+
+```
+mode: embedded
+task_id: <task_id>
+caller: /harness setup
+goal: "<raw user goal>"
+```
+
+**Consuming the output:** Brainstorming returns a YAML block (see brainstorming skill, Embedded Mode > Output Schema). Map fields to setup state:
+
+| Brainstorming output | Setup action |
+|---|---|
+| `goal` | Use as refined `task.description` in Step 3 |
+| `boundary_hints` | Pre-populate `boundary` defaults for Step 3 confirmation |
+| `protocol_hint` | Pre-populate `task.protocol` default for Step 3 confirmation |
+| `check_hints` | Pre-populate `checks[]` defaults for Step 3 confirmation |
+| `milestones` | Pass to Bootstrap Strategy (run initialization) as seed decomposition |
+
+All values remain advisory until Step 3 finalizes them. The user confirms or overrides each field during contract finalization.
+
+**Milestone handoff:** When brainstorming produces `milestones`, Bootstrap Strategy uses them as the starting decomposition instead of generating from scratch. It may restructure (split, reorder, insert prerequisites) but should preserve the user-validated approach rankings.
+
 ## Step 2: Understand the Codebase
 
 Read business code, understand architecture and relevant paths, scan infrastructure affecting `config.yaml` and `checks[]`. If the task turns out more complex than expected, return to Step 1 to adjust the goal with the user.
