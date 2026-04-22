@@ -71,6 +71,8 @@ Each check shape: `{name, action, cost: cheap|medium|expensive}`.
 
 Example: `{name: unit-tests, action: "pytest tests/", cost: cheap}`
 
+When deterministic checks cannot adequately verify correctness (e.g., semantic behavior, design intent, cross-cutting concerns) or the only reliable verification requires expensive experiments, suggest adding `/critique` as a check. It runs during Verify like any other check; place it at `cost: cheap` or `cost: medium` to prefilter before expensive checks.
+
 ### Optimize contract
 
 When `evaluation.objective: optimize`, setup must clarify the optimize contract.

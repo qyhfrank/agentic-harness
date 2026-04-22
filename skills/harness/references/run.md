@@ -152,7 +152,7 @@ After Baseline passes:
 ### Commit
 
 - Stage only `boundary.mutable`
-- commit message: `chore(harness): round-{N} <description>`
+- commit message: follow Conventional Commits (`<type>(<scope>): <subject>`). Choose `type` and `scope` from actual change content, not from harness metadata. Do not embed round numbers in the subject.
 - hook blocked: save patch to `artifacts/round-{N}/`, reset to pre-round HEAD, mark as `reverted` (reason: `hook_blocked`)
 
 ### Verify
