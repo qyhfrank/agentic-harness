@@ -117,6 +117,7 @@ After Preflight passes:
 2. Append `baseline_recorded` to `state.jsonl`
 3. Update `context.md`: `phase: run`, `round: 0 / propose`, `current_objective`, `best_result`, `last_action: "baseline recorded"`
 4. Rewrite `Next Steps`, point to round 1
+5. Refresh the native progress mirror if available
 
 `baseline_recorded` anchors the starting point; it does not mean the task is complete.
 
@@ -129,6 +130,7 @@ After Baseline passes:
 3. Write `plan.yaml` with `strategy.status: active`, `active_milestone_id: M1`
 4. Emit `strategy_updated(reason=bootstrap, trigger=initial)`
 5. Update `context.md`: `active_milestone`, `active_approach`, `version`
+6. Refresh the native progress mirror if available
 
 ## Round Lifecycle
 
@@ -234,6 +236,8 @@ Translate round verdict into plan-level actions. See `references/plan.md` for th
 
 Update `state.jsonl` (append event) and `context.md` (round state, objective, best_result, Next Steps). Write `artifacts/round-{N}/` evidence.
 
+Refresh the native progress mirror if available. Best effort only; mirror failures never affect routing, evaluation, or stop conditions.
+
 Decision-only rounds are allowed when no code or config change is needed and `HEAD` stays unchanged. They still write `artifacts/round-{N}/manifest.json` with `changed_files: []` and a note saying whether verification reran or was reused from the prior unchanged commit.
 
 ## Stop Conditions
@@ -252,6 +256,7 @@ When a stop condition fires:
 1. Append `harness_stopped` to `state.jsonl` with the matching `reason`
 2. Update `context.md`: set `round: N / stopped`, `last_action` to stop summary, rewrite `Next Steps` to disposition prompt
 3. Present disposition options to user
+4. Refresh the native progress mirror if available
 
 ### Doom loop (tactics-level)
 
@@ -323,4 +328,4 @@ Proposed commits (oldest → newest):
 
 User confirms or requests re-grouping. Execute: reset worktree to `base_branch`, apply commits in order (Conventional Commits), fast-forward `base_branch`.
 
-After applying: append `task_disposed` to `state.jsonl`; update `context.md` (`round: N / stopped`, `last_action`: final summary, clear `Next Steps`).
+After applying: append `task_disposed` to `state.jsonl`; update `context.md` (`round: N / stopped`, `last_action`: final summary, clear `Next Steps`); refresh the native progress mirror if available.

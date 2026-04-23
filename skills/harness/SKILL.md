@@ -51,6 +51,10 @@ First match wins:
 
 ## Integration Overlays
 
+### Native progress mirror
+
+If native user-visible task or todo progress exists, mirror the current harness status into it. Mirror only progress display. Do not use native tasks for routing, recovery, verification, or control; `state.jsonl` and `plan.yaml` stay authoritative.
+
 ### Caffeine = silent
 
 When `caffeine` wraps harness, intermediate rounds produce no chat output. Notify only on `done`, budget exhausted, stagnation, or hard blocker.

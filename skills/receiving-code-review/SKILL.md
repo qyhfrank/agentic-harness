@@ -1,6 +1,6 @@
 ---
 name: receiving-code-review
-description: Use when receiving code change suggestions (PR reviews, verbal feedback, messages, or any other source) before implementing them. All suggestions not yet confirmed in context must be verified first — requires technical rigor, not performative agreement or blind implementation
+description: Use when receiving external code change suggestions (PR reviews, verbal feedback, messages, or any other non-self-generated source) before implementing them. Not required for `/critique`, which should verify and adjudicate its own findings internally.
 ---
 
 # Code Review Reception
@@ -8,6 +8,14 @@ description: Use when receiving code change suggestions (PR reviews, verbal feed
 Code review requires technical evaluation, not emotional performance.
 
 **Core principle:** Verify before implementing. Ask before assuming. Technical correctness over social comfort.
+
+## Boundary
+
+This skill is for externally supplied review feedback.
+
+If `/critique` already dispatches reviewers, verifies findings against source,
+and returns a verdict, it should be self-contained and should not require a
+second call to this skill to consume its own findings.
 
 ## Response Pattern
 

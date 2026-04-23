@@ -16,6 +16,7 @@ description: Use when the user requests a structured review or needs to surface 
 - Are existing behavior, interfaces, data contracts, and compatibility that were not requested to change preserved, without introducing unrequested scope expansion or maintenance cost?
 - Does the implementation address the real problem, root cause, or user goal rather than only fixing a surface symptom or adjacent issue?
 - If the spec is incomplete, conflicting, or impossible to determine from the source material, are the gaps called out explicitly?
+- If some surface is explicitly deferred or out of scope, are findings limited to current risks instead of pressuring the artifact to implement the deferred surface?
 
 #### Goal 2: Functional correctness
 - Within the agreed target behavior, are the happy path, edge cases, null values, and invalid inputs handled correctly?
@@ -67,7 +68,7 @@ If reviewer dispatch is blocked by execution-surface unavailability, policy, or 
 - Reviewer agent type: `gpt` by default for critique unless the user explicitly overrides it
 - Review target and scope materials, such as a diff, files, a plan, or another artifact
 - Goal name, review angle, coverage target, and review standard
-- Finding format and constraints: report only non-speculative issues with a real anchor; skip purely stylistic or speculative suggestions; avoid scope expansion unless required to fix a verified issue
+- Finding format and constraints: report only non-speculative issues with a real anchor; skip purely stylistic or speculative suggestions; avoid scope expansion unless required to fix a verified issue; if the target materials explicitly defer a surface, do not treat lack of support itself as a finding unless the artifact claims support or omission creates a concrete current risk
 - Minimal Fix: prioritize correctness and artifact quality. Start with the smallest safe change (add tests/guards when required). If a small patch cannot fix the issue safely, recommend the minimal necessary refactor and state why; bound scope and list verification steps. For Goal 5 findings, prefer minimal diffs and deleting/inlining/narrowing over adding layers
 - Severity: `near-blocking` = the issue exists but lacks direct failure evidence; `blocking` = there is evidence of a real bug or production risk
 
@@ -93,6 +94,7 @@ If reviewer-pair cardinality is still unmet after `/fanout` exhausts retry, stop
 
 Start GSA (Generative Self-Aggregation) to merge duplicate issues and mark them.
 Verify each anchor and finding against the source material. For code review, go back to files and lines; for other review types, go back to steps, items, or sections from the provided review material. Unverified findings do not enter the final result. Findings raised multiple times deserve extra scrutiny.
+After source verification, do owner-side adjudication inside `/critique` itself: a verified finding may still be out of current scope. When several findings reduce to one deferred-surface mismatch, collapse them and prefer trim/split/delete over implementing the deferred work.
 Renumber finding IDs and assign the final severity level.
 
 ## Step 6: Return the verdict

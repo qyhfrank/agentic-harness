@@ -25,6 +25,7 @@ Choose execution surface separately from agent type.
 | Team orchestration (shared task list / messaging) | Supported | Not supported | Not supported |
 
 Prefer simplest surface for current step. Deterministic waits and scriptable monitors stay with tools unless ongoing reasoning needed.
+Default child-agent timeout is 30 minutes.
 
 ## Hard Rules
 

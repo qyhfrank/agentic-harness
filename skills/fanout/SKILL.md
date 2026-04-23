@@ -35,6 +35,7 @@ Platform-aware dispatch. Choose the correct path based on current platform and w
 **Codex CLI:**
 
 - Spawn agents natively with model `gpt-5.4` reasoning `xhigh` (defaults, unless user explicitly overrides model or effort).
+- Use a 30-minute timeout by default.
 
 **Error handling (all platforms):**
 
