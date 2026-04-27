@@ -37,11 +37,23 @@ initialize -> [propose -> cleanup -> commit -> verify -> evaluate -> investigate
 
 Mutation rules:
 
-- `Current State`: overwrite every round. `phase`: `setup (complete)` | `run`. `round`: `completed rounds / current stage` (`-` `preflight` `propose` `cleanup` `commit` `verify` `evaluate` `record` `stopped`)
-- `Working Memory`: prune every round
-- `Durable Notes`: persist across rounds
-- `Decisions`: append-only
-- `Next Steps`: rewrite every round
+- `Current State`: **generated from state.jsonl + plan.yaml at Record and lifecycle boundaries**. `phase` and `round` always from ledger; `active_milestone`, `active_approach`, `version`, `current_objective`, `best_result` reconciled against ledger (if drift, ledger wins). Generation mapping by last event:
+
+  | Last event | phase | round | active fields | best_result |
+  |---|---|---|---|---|
+  | no events (empty ledger) | `setup (complete)` | `0 / -` | from plan.yaml if exists, else pending | `baseline not recorded yet` |
+  | `baseline_recorded` | `run` | `0 / propose` | from plan.yaml | baseline summary |
+  | `round_completed` | `run` | `N / <eval result>` | from controller | latest kept/done summary |
+  | `harness_stopped` | `stopped` | `N / stopped` | last controller | last kept/done summary |
+  | `task_disposed` | `disposed` | `N / stopped` | last controller | disposition summary |
+  | `task_completed` (legacy) | `done` | `N / done` | last controller | completion summary |
+
+  `best_result` for satisfy: latest `kept|done` round summary. For optimize: summary of event with current `best_value`.
+
+- `Working Memory`: manual, prune every round
+- `Durable Notes`: manual, persist across rounds
+- `Decisions`: manual, append-only
+- `Next Steps`: manual during active run; **generated from ledger after stopped/disposed**
 
 ### `state.jsonl`
 
@@ -52,7 +64,7 @@ Append-only. `metric` field present only for optimize. Add `evaluation.reason` w
 ```
 
 ```json
-{"event":"round_completed","task_id":"…","ts":"…","round":1,"commit":"<sha|null>","verification":{"status":"pass|fail|escalated","gates":{"<check>":"pass|fail|escalated"}},"evaluation":{"result":"kept|reverted|escalated|done"},"controller":{"version":1,"milestone_id":"M1","approach_id":"A1","approach_decision":"continue|demote|failed|complete|task_done|blocked","strategy_signal":"none|milestone_done|all_approaches_exhausted|new_constraint"},"metric":{"value":0,"delta":0},"summary":"…"}
+{"event":"round_completed","task_id":"…","ts":"…","round":1,"commit":"<sha|null>","verification":{"status":"pass|fail|escalated","gates":{"<check>":"pass|fail|escalated"}},"evaluation":{"result":"kept|reverted|escalated|done"},"controller":{"version":1,"milestone_id":"M1","approach_id":"A1","approach_decision":"continue|demote|failed|complete|task_done|blocked","strategy_signal":"none|all_approaches_exhausted|new_constraint","next_milestone_id":"M2|null"},"metric":{"value":0,"delta":0},"summary":"…"}
 ```
 
 ```json
@@ -64,7 +76,7 @@ Append-only. `metric` field present only for optimize. Add `evaluation.reason` w
 ```
 
 ```json
-{"event":"strategy_updated","task_id":"…","ts":"…","round":3,"version":2,"reason":"bootstrap|advance|replan","trigger":"initial|legacy_migration|milestone_done|all_approaches_exhausted|new_constraint|stagnation","active_milestone_id":"M2","summary":"…"}
+{"event":"strategy_updated","task_id":"…","ts":"…","round":3,"version":2,"reason":"bootstrap|replan|reopen","trigger":"<freetext>","active_milestone_id":"M2","summary":"…"}
 ```
 
 Invariants:
@@ -74,7 +86,9 @@ Invariants:
 - `harness_stopped`, if present, appears exactly once and immediately after the final `round_completed`
 - `task_disposed`, if present, appears exactly once and must be the last event; must follow `harness_stopped`
 - `kept|done` requires `verification.status: pass`
-- `strategy_updated` may follow any `round_completed` or `baseline_recorded`; `version` strictly increments on `reason: replan`
+- Milestone advance is encoded in `controller.next_milestone_id` (set when `approach_decision = complete`, null otherwise); `strategy_updated` is reserved for non-linear transitions (bootstrap, replan, reopen)
+- `strategy_updated` may follow `round_completed` or `baseline_recorded` for non-linear transitions; `version` strictly increments on `reason: replan`
+- `trigger` is freetext describing why the strategy changed; recommended values: `initial`, `replan`, `reopen`, `new_constraint`. Routing uses structured fields, not trigger matching
 - final task completion is encoded as `evaluation.result: done` with `controller.approach_decision: task_done`; do not encode terminal completion as `kept + strategy_signal: done`
 - `state.jsonl` = event truth; `context.md` = live working state
 
@@ -115,9 +129,8 @@ After Preflight passes:
 
 1. Collect baseline summary; also collect baseline metric when `optimize`
 2. Append `baseline_recorded` to `state.jsonl`
-3. Update `context.md`: `phase: run`, `round: 0 / propose`, `current_objective`, `best_result`, `last_action: "baseline recorded"`
+3. Regenerate `context.md` Current State from ledger (see generation mapping)
 4. Rewrite `Next Steps`, point to round 1
-5. Refresh the native progress mirror if available
 
 `baseline_recorded` anchors the starting point; it does not mean the task is complete.
 
@@ -129,8 +142,7 @@ After Baseline passes:
 2. For the first active milestone, generate 2-3 ranked approaches (initial score spread >= 15); when an approach warrants tactical steps, generate them per `references/plan.md` step content standards
 3. Write `plan.yaml` with `strategy.status: active`, `active_milestone_id: M1`
 4. Emit `strategy_updated(reason=bootstrap, trigger=initial)`
-5. Update `context.md`: `active_milestone`, `active_approach`, `version`
-6. Refresh the native progress mirror if available
+5. Regenerate `context.md` Current State from ledger + plan.yaml
 
 ## Round Lifecycle
 
@@ -149,9 +161,12 @@ After Baseline passes:
 - Keep the implementation boundary minimal after RED evidence is recorded
 - One atomic round at a time; if the description needs "and" to explain, split into multiple rounds
 - **Post-revert guard:** if the previous round was `reverted`, this round's proposal must state the single hypothesis being tested and cite evidence from the failed round. Without both, investigate first — do not generate a patch
+- **Reviewer-driven fix guard:** Treat `/critique`, `/fanout`, and reviewer fixes as advisory. Before patching, check for new wording, output shape, fields, metadata, state, validation infra, or surfaces; implement only explicit user needs or verified blocking fixes, otherwise record non-blocking and delete, hide, narrow, or reuse.
 
 ### Cleanup
 
+- Do not skip cleanup after implementing `/critique`, `/fanout`, or reviewer findings; compare the diff to the original goal and explicit non-goals before commit.
+- For reviewer-driven rounds, classify added guards, state, tests, metadata, validation surfaces, and user-facing surfaces as `keep|fix|delete|defer`; keep only explicit requirements or verified blocking fixes, otherwise delete, narrow, inline, or reuse.
 - Skip for small changes (< ~20 LOC, <= 3 files, no prior-round revert)
 - Re-read diff, check reuse / simplicity / efficiency
 
@@ -181,13 +196,17 @@ First match wins:
 4. objective met -> `done` (satisfy: all checks pass; optimize: all pass + target reached)
 5. otherwise -> `kept`
 
-After `reverted`, rerun cheap checks to confirm baseline is intact.
+**Revert post-actions (only when reverted):**
+
+Rerun cheap checks to confirm baseline is intact.
 
 Rollback: `revert_commit` = `git revert HEAD --no-edit`; `reset_to_last_pass` = `git reset --hard <last_kept_commit>` (requires human approval). When `preserve_failed_experiments: true`, save `artifacts/round-{N}/attempted.patch` before revert.
 
+**Recording semantics (all outcomes):**
+
 `round_completed.commit` = current HEAD SHA at time of recording (after any rollback). For pre-commit failures, `commit` = `null`. `last_kept_commit` = `commit` of the most recent `round_completed` where `evaluation.result` is `kept` or `done`; falls back to `baseline_recorded.commit` if none exists.
 
-Metric runtime (optimize):
+**Metric runtime (optimize):**
 
 - `volatile: true`: rerun `N-1` additional times within the round, take median
 - `metric.delta`: increase = `value - best_value`, decrease = `best_value - value`
@@ -220,23 +239,38 @@ Write these to `artifacts/round-{N}/investigation.md` and reference in `Durable 
 
 Translate round verdict into plan-level actions. See `references/plan.md` for the full decision table.
 
-1. Classify `failure_scope` for reverted rounds (`execution|hypothesis|environment`)
-2. Update approach: `attempts++`, adjust `revert_streak` and `score` per delta table
-3. If `kept` and approach has `steps[]`: advance `current_step` when sub-goal is met
-4. Determine `approach_decision` and `strategy_signal`
+**Always:**
+1. Update approach: `attempts++`
+
+**If kept:**
+2. If approach has `steps[]`: advance `current_step` when sub-goal is met
+3. Determine `approach_decision` and `strategy_signal`
+4. If `approach_decision = complete`: mark milestone done, advance to next pending milestone; set `controller.next_milestone_id`
+
+**If done:**
+2. Set `strategy.status = done`, mark current milestone and approach as `done`, set `approach_decision = task_done`
+
+**If reverted:**
+2. Classify `failure_scope` for reverted rounds (`execution|hypothesis|environment`)
+3. Adjust `revert_streak` and `score` per delta table
+4. Determine `approach_decision`: `demote` or `failed`
 5. If `approach_decision = failed`: mark approach, activate highest-score candidate
 6. If no candidates remain: `strategy_signal = all_approaches_exhausted`
-7. If `approach_decision = complete`: mark milestone done, advance to next pending milestone; emit `strategy_updated(reason=advance, trigger=milestone_done)`
-8. If `evaluation.result = done`: set `strategy.status = done`, mark current milestone and approach as `done`, set `approach_decision = task_done`, and keep `strategy_signal = none`
-9. Update `plan.yaml`
+
+**If escalated:**
+2. Set `approach_decision = blocked`, `approach.status = blocked`
+3. Stop condition fires at stop-check
+
+**Finally (all outcomes):**
+Update `plan.yaml`
 
 `evaluation.result = done` pairs with `approach_decision = task_done`. Milestone completion uses `kept + approach_decision = complete`. `approach_decision` maps to `approach.status`: `failed → failed`, `blocked → blocked`, `complete → done`.
 
 ### Record
 
-Update `state.jsonl` (append event) and `context.md` (round state, objective, best_result, Next Steps). Write `artifacts/round-{N}/` evidence.
+Update `state.jsonl` (append event) and `context.md` (regenerate Current State from ledger; update manual sections). Write `artifacts/round-{N}/manifest.json` when the round executed checks, changed files, had a skip/short-circuit, or is decision-only. Omit the round artifact dir only for rounds where state.jsonl summary is the sole record needed.
 
-Refresh the native progress mirror if available. Best effort only; mirror failures never affect routing, evaluation, or stop conditions.
+Refresh native progress mirror (best effort; failures never affect routing, evaluation, or stop conditions).
 
 Decision-only rounds are allowed when no code or config change is needed and `HEAD` stays unchanged. They still write `artifacts/round-{N}/manifest.json` with `changed_files: []` and a note saying whether verification reran or was reused from the prior unchanged commit.
 
@@ -247,16 +281,17 @@ Checked after each round's Record, first match wins:
 1. `done`
 2. `escalated`
 3. round >= `termination.max_rounds` (`-1` disables)
-4. stagnation (satisfy: last N rounds all `reverted` and replan-check has run; optimize: last N metric samples did not advance frontier)
+4. stagnation:
+   - satisfy: last N rounds all `reverted` and replan-check has run
+   - optimize: last N metric samples did not advance frontier
 
 `kept` is not a reason to stop.
 
 When a stop condition fires:
 
 1. Append `harness_stopped` to `state.jsonl` with the matching `reason`
-2. Update `context.md`: set `round: N / stopped`, `last_action` to stop summary, rewrite `Next Steps` to disposition prompt
-3. Present disposition options to user
-4. Refresh the native progress mirror if available
+2. Regenerate `context.md` Current State from ledger (phase: stopped); rewrite `Next Steps` to disposition prompt
+3. Present disposition via AskUserQuestion with options: merge (worktree only), keep, discard
 
 ### Doom loop (tactics-level)
 
@@ -278,7 +313,7 @@ Action: `escalated` for human architecture review. Do not continue with fanout o
 
 **Triggers** (checked at `replan-check`, after Record):
 
-1. `milestone_done`: activate next pending milestone; generate tactics for it. Not a structural replan; does not bump `plan_version`.
+1. `controller.next_milestone_id` set: activate next pending milestone; generate tactics for it. Not a structural replan; does not bump `plan_version`.
 2. `all_approaches_exhausted`: current milestone has no `active|candidate` approaches.
 3. `new_constraint`: `[constraint][strategy]` in Durable Notes invalidates milestone order or feasibility.
 4. `stagnation`: current milestone has N consecutive rounds with no `kept` progress across multiple approaches.
@@ -296,7 +331,7 @@ Action: `escalated` for human architecture review. Do not continue with fanout o
 
 ## Disposition
 
-After user selects `merge|keep|discard`:
+Collect disposition via AskUserQuestion (not inline text). Options: `merge` (worktree only), `keep`, `discard`. After user selects:
 
 - **`merged`** (worktree mode only): organize changes into logical commits on `task.base_branch`, delete branch and worktree. See **Commit organization** below.
 - **`kept`**: preserve final code state; worktree mode reports path + branch, in-place preserves current state
@@ -328,4 +363,4 @@ Proposed commits (oldest → newest):
 
 User confirms or requests re-grouping. Execute: reset worktree to `base_branch`, apply commits in order (Conventional Commits), fast-forward `base_branch`.
 
-After applying: append `task_disposed` to `state.jsonl`; update `context.md` (`round: N / stopped`, `last_action`: final summary, clear `Next Steps`); refresh the native progress mirror if available.
+After applying: append `task_disposed` to `state.jsonl`; regenerate `context.md` Current State from ledger (phase: disposed, Next Steps: cleared).

@@ -5,14 +5,14 @@ description: 'Use when the user asks about Agent Switchboard (ASB) config/sync/p
 
 # Agent Switchboard (ASB) Guide
 
-ASB manages MCP servers, rules, commands, agents, skills, and hooks from single source (`~/.agent-switchboard/`), syncs to every AI coding agent (Claude Code, Codex, Cursor, Gemini, OpenCode, Trae, Claude Desktop).
+ASB manages MCP servers, rules, commands, agents, skills, and hooks from `~/.asb/` on this machine (`ASB_HOME` configurable), syncing to every AI coding agent (Claude Code, Codex, Cursor, Gemini, OpenCode, Trae, Claude Desktop).
 
 Alias: `asb`. Install: `npm i -g agent-switchboard`.
 
 ## Directory Layout
 
 ```
-~/.agent-switchboard/          # ASB_HOME (configurable via env)
+~/.asb/                       # ASB_HOME on this machine (configurable via env)
 ├── config.toml                # User-level config (primary)
 ├── <profile>.toml             # Profile config layer (activated with -p)
 ├── mcp.json                   # MCP server definitions (JSONC)
@@ -168,7 +168,7 @@ Plugin components auto-expanded into section lists during `asb sync`. No manual 
 
 ## MCP Configuration (mcp.json)
 
-File: `~/.agent-switchboard/mcp.json` (JSONC, comments allowed).
+File: `~/.asb/mcp.json` (JSONC, comments allowed on this machine).
 
 Stores server **definitions** only. Enabled state managed in `config.toml [mcp].enabled`.
 
@@ -369,7 +369,7 @@ Custom targets via `[targets.<id>]` in config.toml using DSL. See `references/ta
 npm i -g agent-switchboard
 
 # Create config
-cat > ~/.agent-switchboard/config.toml << 'EOF'
+cat > ~/.asb/config.toml << 'EOF'
 [applications]
 enabled = ["claude-code", "cursor"]
 EOF
@@ -429,5 +429,5 @@ asb agent load codex              # ~/.codex/agents/
 
 | Variable          | Default                | Purpose                             |
 |:------------------|:-----------------------|:------------------------------------|
-| `ASB_HOME`        | `~/.agent-switchboard` | Library, config, and state location |
+| `ASB_HOME`        | `~/.asb`               | Library, config, and state location |
 | `ASB_AGENTS_HOME` | User home directory    | Base path for agent config files    |

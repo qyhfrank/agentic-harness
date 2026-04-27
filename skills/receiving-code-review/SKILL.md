@@ -1,6 +1,6 @@
 ---
 name: receiving-code-review
-description: Use when receiving external code change suggestions (PR reviews, verbal feedback, messages, or any other non-self-generated source) before implementing them. Not required for `/critique`, which should verify and adjudicate its own findings internally.
+description: Use when receiving external code change suggestions (PR reviews, verbal feedback, messages, or any other non-self-generated source) before implementing them. Not for agentic-generated reviews (`/critique`, `/fanout` review, or any self-dispatched reviewer output); those workflows verify and adjudicate their own findings internally.
 ---
 
 # Code Review Reception
@@ -11,11 +11,9 @@ Code review requires technical evaluation, not emotional performance.
 
 ## Boundary
 
-This skill is for externally supplied review feedback.
+This skill is for **human-supplied or externally authored** review feedback only.
 
-If `/critique` already dispatches reviewers, verifies findings against source,
-and returns a verdict, it should be self-contained and should not require a
-second call to this skill to consume its own findings.
+Agentic review workflows (`/critique`, `/fanout` review dispatch, or any self-dispatched reviewer output) own their own verification and adjudication. Do not route their findings through this skill; doing so adds a redundant verification layer that conflicts with the reviewer workflow's own GSA and source-verification steps.
 
 ## Response Pattern
 

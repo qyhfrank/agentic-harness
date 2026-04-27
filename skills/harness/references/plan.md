@@ -25,10 +25,9 @@ milestones:
         steps: []              # ordered sub-steps; optional, populated when approach has multi-step structure
         current_step: 0        # index into steps[]; 0 when steps is empty or first step
         attempts: 0
-        revert_streak: 0
-        last_failure_family: null
         evidence_for: []
         evidence_against: []
+        # revert_streak, last_failure_family: omitted at bootstrap; created on first revert
 ```
 
 Field notes: `version` bumps only on structural replan (not on milestone advance). `exit_criteria` must reference a check, artifact, or observable code-state claim. `score` is a coarse ranking heuristic, not a probability. `evidence_for/against` store one-line summaries; full evidence stays in `artifacts/`.
@@ -103,15 +102,20 @@ Only one approach per milestone has `status: active`. On failure, promote highes
 
 | Round outcome | Condition | Score delta | Approach decision |
 |---|---|---|---|
-| `kept` | milestone not done | +5 | `continue` |
-| `kept` | exit_criteria met | +5 | `complete` -> advance milestone |
+| `kept` | milestone not done | 0 | `continue` |
+| `kept` | exit_criteria met | 0 | `complete` -> advance milestone |
 | `done` | final task objective met | 0 | `task_done` -> strategy.status=done, all active milestones/approaches → done |
+| `escalated` | any | 0 | `blocked` -> stop |
+
+**On revert (conditional):**
+
+| Round outcome | Condition | Score delta | Approach decision |
+|---|---|---|---|
 | `reverted` | first occurrence of this failure family | -10 | `demote` (retry same approach) |
 | `reverted` | same failure family repeated OR `[dead-end]` evidence | -30 | `failed` -> switch approach |
 | `reverted` | `[constraint]` invalidates hypothesis | -30 | `failed` -> switch approach |
-| `escalated` | any | 0 | `blocked` -> stop |
 
-Hysteresis: active approach keeps priority unless a candidate exceeds it by >= 15 points.
+Hysteresis: active approach keeps priority unless a candidate exceeds it by >= 15 points. Since kept rounds do not increase score, the active approach's lead is set at bootstrap; only reverts can erode it.
 
 ## Failure Scope
 
@@ -127,11 +131,27 @@ Default to `execution` when ambiguous. Only upgrade to `hypothesis` on repeated 
 
 The `adapt` step runs after Evaluate, before Record. It translates round verdicts into plan actions:
 
+**Always:**
 1. Read `evaluation.result` and current `plan.yaml` state
-2. Classify `failure_scope` for reverted rounds
-3. Update approach counters (`attempts`, `revert_streak`, `score`)
-4. Determine `approach_decision`: `continue|demote|failed|complete|blocked`
-5. Determine `strategy_signal`: `none|milestone_done|all_approaches_exhausted|new_constraint`
+2. Update approach counters (`attempts`)
+
+**If kept:**
+3. If approach has `steps[]`: advance `current_step` when sub-goal is met
+4. Determine `approach_decision`: `continue|complete|task_done`
+5. If `complete`: mark milestone done, activate next pending milestone, set `controller.next_milestone_id`
+
+**If done:**
+3. Set `strategy.status = done`, mark current milestone and approach as `done`, set `approach_decision = task_done`
+
+**If reverted:**
+3. Classify `failure_scope` (`execution|hypothesis|environment`)
+4. Update `revert_streak` and `score` per delta table
+5. Determine `approach_decision`: `demote|failed|blocked`
 6. If `failed`: mark approach, activate next candidate by score
 7. If no candidates remain: set `strategy_signal = all_approaches_exhausted`
-8. Write updated `plan.yaml`; emit `strategy_updated` event if strategy changed
+
+**If escalated:**
+3. Set `approach_decision = blocked`, `approach.status = blocked`
+
+**Finally (all outcomes):**
+Write updated `plan.yaml`; emit `strategy_updated` only for non-linear transitions (replan, reopen). Milestone advance uses `controller.next_milestone_id`, not `strategy_updated`.
