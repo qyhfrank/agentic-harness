@@ -65,7 +65,7 @@ Finalize in this order:
 Each check shape: `{name, action, cost: cheap|medium|expensive}`.
 
 - `name`: unique identifier for the check, referenced by `verification.gates` and `metric.sample_check`
-- `action`: command or skill to execute (e.g., shell command, `/critique -a gpt-5.4:6`)
+- `action`: command or skill to execute (e.g., shell command, `/critique -a gpt-5.5:6`)
 - `cost`: determines execution order (`cheap -> medium -> expensive`)
 - `checks[]` must contain at least 1 check before setup completes
 - `checks[]` is the runtime verification contract. After setup, change the command, order, or membership in `config.yaml` before Verify uses the new shape.

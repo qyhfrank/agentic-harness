@@ -10,6 +10,10 @@ Arguments: $ARGUMENTS
 - `-a` (default: 5 x `auto`) — number = count of inferred worker type; `type` = that type x5; `type:N` = specific. Valid types include `gpt`. `/codex-exec` in the task argument or `-a gpt` both resolve worker type to `gpt`.
 - `-b` (default: off) — background child context
 
+## Ownership Boundary
+
+`/fanout` dispatches and samples; it does not own formal code review. For code-review gates, verdicts, or implementation-issue review, use `/critique`, which calls `/fanout -m sample` and owns goals, reviewer cardinality, source verification, scope adjudication, and verdict. Use `/fanout` directly for exploration, diagnosis, design sampling, or caller-owned workflows.
+
 ## Step 1: Infer mode
 
 - Broad research -> split; narrow and hard -> sample
@@ -34,7 +38,7 @@ Platform-aware dispatch. Choose the correct path based on current platform and w
 
 **Codex CLI:**
 
-- Spawn agents natively with model `gpt-5.4` reasoning `xhigh` (defaults, unless user explicitly overrides model or effort).
+- Spawn agents natively with model `gpt-5.5` reasoning `xhigh` (defaults, unless user explicitly overrides model or effort).
 - Use a 30-minute timeout by default.
 
 **Error handling (all platforms):**

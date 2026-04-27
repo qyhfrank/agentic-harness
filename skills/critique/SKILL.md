@@ -5,6 +5,8 @@ description: Use when the user requests a structured review or needs to surface 
 
 # Critique
 
+Critique is a self-contained agentic review workflow. It dispatches reviewers, verifies findings against source, and returns a verdict. Do not route critique findings through `receiving-code-review`; that skill is for human-supplied or externally authored feedback only.
+
 ## Step 1: Load skill `/fanout`
 
 ## Step 2: Plan the review goals
@@ -27,6 +29,7 @@ description: Use when the user requests a structured review or needs to surface 
 - Are tests, assertions, logs, metrics, probes, or manual verification steps sufficient to support the key conclusions?
 - Does the validation cover critical paths, key boundaries, and major failure modes?
 - Are review conclusions based on provided evidence rather than "the code looks right"?
+- If closing an evidence gap would require introducing new heavy browser/DOM harnesses, test frameworks, or other validation infrastructure that the target repo does not already use, prefer reporting a `near-blocking` gap and recommending a lighter deterministic probe first.
 
 #### Goal 4 (optional): Risk and failure safety
 Add this goal when the change touches permissions/trust boundaries, durable state/data writes, or concurrency/retry/rollback/idempotency.
@@ -58,7 +61,7 @@ The critique launcher must provide the review artifact and enough context to jud
 
 ## Step 3: Dispatch reviewers via `/fanout -m sample`
 
-Review is Thinker work. Default reviewer agent type is `gpt`. Refer to `using-agents`, use gpt-5.4 xhigh (for Codex CLI) or load `/codex-exec` (for Claude Code) first.
+Review is Thinker work. Default reviewer agent type is `gpt`. Refer to `using-agents`, use gpt-5.5 xhigh (for Codex CLI) or load `/codex-exec` (for Claude Code) first.
 For each goal, use `/fanout -m sample -a gpt:2` to dispatch 2 independent reviewers with the same prompt. Override the agent type only if the user explicitly requests a different reviewer type. Total reviewers required: 2 * number of goals. Inline review is not allowed.
 If reviewer dispatch is blocked by execution-surface unavailability, policy, or another launch failure, let `/fanout` apply its own retry policy first. Return `needs_escalation` only if `/fanout` exhausts retry and reviewer-pair cardinality is still unmet. Do not silently substitute another reviewer type or inline review.
 
@@ -69,6 +72,8 @@ If reviewer dispatch is blocked by execution-surface unavailability, policy, or 
 - Review target and scope materials, such as a diff, files, a plan, or another artifact
 - Goal name, review angle, coverage target, and review standard
 - Finding format and constraints: report only non-speculative issues with a real anchor; skip purely stylistic or speculative suggestions; avoid scope expansion unless required to fix a verified issue; if the target materials explicitly defer a surface, do not treat lack of support itself as a finding unless the artifact claims support or omission creates a concrete current risk
+- Preserve explicit user wording and surfaces. If context gives exact labels, output shape, fields, or "do not use X", do not propose alternate labels/fields/surfaces unless required by a verified bug; prefer delete, hide, narrow, or reuse.
+- For validation-gap findings, prefer the smallest proof needed for the current slice. If stronger evidence would require adding new heavy verification infrastructure not already present in the target repo, default to `near-blocking` unless there is already concrete bug evidence.
 - Minimal Fix: prioritize correctness and artifact quality. Start with the smallest safe change (add tests/guards when required). If a small patch cannot fix the issue safely, recommend the minimal necessary refactor and state why; bound scope and list verification steps. For Goal 5 findings, prefer minimal diffs and deleting/inlining/narrowing over adding layers
 - Severity: `near-blocking` = the issue exists but lacks direct failure evidence; `blocking` = there is evidence of a real bug or production risk
 
@@ -95,6 +100,17 @@ If reviewer-pair cardinality is still unmet after `/fanout` exhausts retry, stop
 Start GSA (Generative Self-Aggregation) to merge duplicate issues and mark them.
 Verify each anchor and finding against the source material. For code review, go back to files and lines; for other review types, go back to steps, items, or sections from the provided review material. Unverified findings do not enter the final result. Findings raised multiple times deserve extra scrutiny.
 After source verification, do owner-side adjudication inside `/critique` itself: a verified finding may still be out of current scope. When several findings reduce to one deferred-surface mismatch, collapse them and prefer trim/split/delete over implementing the deferred work.
+Classify each verified finding before fixes:
+
+- `spec-required bug`: requirement or compatibility violation.
+- `current production risk`: concrete current runtime, data, security, availability, or user-visible failure.
+- `validation gap`: weak evidence without a proven bug.
+- `cleanup/simplification`: acceptable behavior with excess breadth, duplication, or complexity.
+- `out-of-scope policy/feature`: deferred surface, new policy, or adjacent behavior.
+
+Only the first two justify new guards, state, schema, validation infra, or broad tests by default. For the rest: use smallest existing proof, delete/narrow/inline/reuse, or omit/escalate.
+Reviewer findings and `Minimal Fix` text are advisory. Implement only fixes that fit current scope and explicit user wording. New labels, fields, metadata, state, validation infra, or display surfaces require explicit user need or verified blocking issue; otherwise drop/escalate and prefer delete, hide, narrow, or reuse.
+For evidence-only findings, also judge whether the proposed verification would materially widen the target repo's validation surface. If yes, keep the finding `near-blocking` unless there is already concrete bug evidence or the heavier verification is part of the repo's established CI path.
 Renumber finding IDs and assign the final severity level.
 
 ## Step 6: Return the verdict
