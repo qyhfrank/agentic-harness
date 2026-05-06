@@ -50,15 +50,16 @@ Read business code, understand architecture and relevant paths, scan infrastruct
 
 ## Step 4: Finalize the Contract
 
-Ask before writing the contract. Default values may be suggested upfront, but fields that change behavior must not be guessed. If an unresolved answer would change `boundary`, `checks`, `evaluation`, `termination`, `rollback`, or `execution_policy`, stay in setup.
+Ask before writing the contract. Default values may be suggested upfront, but fields that change behavior must not be guessed. If an unresolved answer would change `boundary`, the observable done condition, `checks`, `evaluation`, `termination`, `rollback`, or `execution_policy`, stay in setup.
 
 Finalize in this order:
 
 1. `boundary.mutable` and `boundary.immutable`
-2. `task.protocol` (default `direct`; when behavior-changing work can be proven with a failing test or the smallest reproducible script, ask the user whether to use `tdd_preferred` or `tdd_required`)
-3. `checks[]`
-4. `evaluation.objective` (discrete acceptance defaults to `satisfy`; metric improvement defaults to `optimize`)
-5. `evaluation.metric.*` (only when objective is `optimize`; target defaults to unset, optimize continuously until budget or stagnation)
+2. Observable done condition for the task objective (separate from checks)
+3. `task.protocol` (default `direct`; when behavior-changing work can be proven with a failing test or the smallest reproducible script, ask the user whether to use `tdd_preferred` or `tdd_required`)
+4. `checks[]`
+5. `evaluation.objective` (discrete acceptance defaults to `satisfy`; metric improvement defaults to `optimize`)
+6. `evaluation.metric.*` (only when objective is `optimize`; target defaults to unset, optimize continuously until budget or stagnation)
 
 ### Checks contract
 
@@ -68,11 +69,13 @@ Each check shape: `{name, action, cost: cheap|medium|expensive}`.
 - `action`: command or skill to execute (e.g., shell command, `/critique -a gpt-5.5:6`)
 - `cost`: determines execution order (`cheap -> medium -> expensive`)
 - `checks[]` must contain at least 1 check before setup completes
-- `checks[]` is the runtime verification contract. After setup, change the command, order, or membership in `config.yaml` before Verify uses the new shape.
+- `checks[]` is the runtime verification contract, not the done condition. After setup, change the command, order, or membership in `config.yaml` before Verify uses the new shape.
 
 Example: `{name: unit-tests, action: "pytest tests/", cost: cheap}`
 
-When deterministic checks cannot adequately verify correctness (e.g., semantic behavior, design intent, cross-cutting concerns) or the only reliable verification requires expensive experiments, suggest adding `/critique` as a check. It runs during Verify like any other check; place it at `cost: cheap` or `cost: medium` to prefilter before expensive checks.
+User-requested named skill gates (for example `/critique` or `$critique`) phrased as check/gate/must-pass/before-done/acceptance must be written as `checks[].action` starting with that skill command; prose/manual-review notes do not satisfy the gate. If the mention is only advisory, ask whether it belongs outside harness checks.
+
+When deterministic checks cannot adequately verify correctness (for example semantic behavior, design intent, cross-cutting concerns), suggest adding `/critique` as a check. It runs during Verify like any other check; place it before expensive checks when useful.
 
 ### Optimize contract
 

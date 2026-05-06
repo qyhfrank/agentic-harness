@@ -53,7 +53,7 @@ For single-file changes or exploratory spikes, short descriptive steps suffice.
 **Per-step requirements** (when tactical):
 
 1. **Files touched** — exact repo-relative paths; distinguish create vs modify
-2. **Content** — code blocks for code steps; no prose-only descriptions
+2. **Content** — precise intended change; include exact code/text only when required to keep the round executable
 3. **Verification** — command + expected outcome (pass/fail pattern)
 
 Granularity: one action per step. If a description needs "and", split it. Target: each step = one harness round.
@@ -65,26 +65,9 @@ Granularity: one action per step. If a description needs "and", split it. Target
 - `tdd_required`: if the step changes production behavior, the step expansion must name the failing reproduction, the proof command, and where the RED evidence will be recorded before implementation.
 - `tdd_preferred`: use the same rhythm by default; if a step is pure docs, config, or other non-behavior work, note why the TDD overlay does not apply in `Decisions`.
 
-**Propose expansion:** Steps stored in plan.yaml stay as short strings. During Propose, the agent expands the current step into a full round with file paths, code blocks, and verification commands per the requirements above.
+**Propose expansion:** Steps stored in plan.yaml stay as short strings. During Propose, expand the current step into one executable round with file paths, intended change, and verification command.
 
-**No-placeholder rules** — these patterns in step expansions are failures:
-
-- "TBD", "TODO", "implement later", "fill in details"
-- "Add appropriate error handling" / "add validation" / "handle edge cases"
-- "Write tests for the above" without actual test code
-- "Similar to step N" (repeat the content; each round is self-contained)
-- Prose-only code steps; references to undefined types or functions
-
-Example:
-
-```yaml
-steps:
-  - "implement RateLimiter class with sliding window core logic"
-  - "integrate as middleware on route layer"
-  - "add unit tests covering boundary cases"
-  - "add config options (window size, max requests)"
-current_step: 1
-```
+**No-placeholder rules** — step expansions fail if they contain TBD/TODO/later, vague "handle edge cases" wording, tests without assertion intent, "similar to step N", undefined types/functions, or prose-only implementation when exact content is required.
 
 ## Approach Lifecycle
 

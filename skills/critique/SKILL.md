@@ -40,16 +40,10 @@ Add this goal when the change touches permissions/trust boundaries, durable stat
 #### Goal 5 (optional): Structure, simplification, and maintainability (reuse / simplicity / efficiency)
 Add this goal when the change introduces a large refactor or new abstractions, high coupling/unclear ownership boundaries, or hot-path/perf-sensitive code.
 - Default bias: smallest structure that preserves clarity, correctness, and testability.
-- **Reuse**
-  - Prefer existing helpers/utilities over new duplicates.
-  - Use stable local utilities instead of hand-rolled string/path/env/type checks.
-- **Simplicity**
-  - Ask whether the same goal can be achieved with fewer helpers, wrappers, branches, return values, or schema aliases.
-  - Remove redundant state, parameter sprawl, copy-paste variants, leaky abstractions, stringly-typed additions, and structure with no current consumer.
-  - Pay special attention to thin wrappers, dead generalization, unused return values, single-call-site helpers, and schema aliases/constants with no extra semantics.
-  - Keep a helper only when it removes real duplication, captures a stable semantic boundary, or creates a materially better test seam.
-- **Efficiency**
-  - Remove unnecessary work, missed concurrency, hot-path bloat, pre-check-before-operate, missing cleanup, and overly broad reads or loads.
+- Reuse existing local helpers instead of duplicates or hand-rolled string/path/env/type checks.
+- Prefer fewer helpers, wrappers, branches, return values, schema aliases, and state; remove unused returns/params, thin wrappers, dead generalization, and structures with no current consumer.
+- Keep a helper only when it removes real duplication, captures a stable semantic boundary, or creates a materially better test seam.
+- Remove unnecessary work, missed concurrency, hot-path bloat, pre-check-before-operate, missing cleanup, and overly broad reads or loads.
 
 For structure or simplification findings, prefer the smallest safe change with a minimal diff. Prefer deleting, inlining, or narrowing over adding another layer. Skip purely stylistic, speculative, or scope-expanding suggestions.
 
@@ -58,6 +52,9 @@ For structure or simplification findings, prefer the smallest safe change with a
 ### Other cases
 For non-code reviews such as plan documents or task lists, generate the smallest sufficient set of review goals from the material, prioritizing completeness, boundaries, dependencies, acceptance, and risk.
 The critique launcher must provide the review artifact and enough context to judge it. For non-code review, anchor goals, findings, and verification to the provided material only. Do not inspect unrelated workspace state or adjacent files to invent findings. If the provided material is insufficient to judge, return `needs_escalation` and name the missing context.
+
+### Review capsule
+Before dispatch, define the target artifact/revision, original goal, selected goals, and known non-goals or scope boundaries when provided or material. Choose the smallest goal set needed for the asked decision: targeted simplification usually uses Goal 1 + Goal 5; durable-state, permission, concurrency, retry, or rollback risk adds Goal 4. If missing context materially affects judgment, return `needs_escalation` instead of broadening scope.
 
 ## Step 3: Dispatch reviewers via `/fanout -m sample`
 
@@ -108,8 +105,15 @@ Classify each verified finding before fixes:
 - `cleanup/simplification`: acceptable behavior with excess breadth, duplication, or complexity.
 - `out-of-scope policy/feature`: deferred surface, new policy, or adjacent behavior.
 
-Only the first two justify new guards, state, schema, validation infra, or broad tests by default. For the rest: use smallest existing proof, delete/narrow/inline/reuse, or omit/escalate.
-Reviewer findings and `Minimal Fix` text are advisory. Implement only fixes that fit current scope and explicit user wording. New labels, fields, metadata, state, validation infra, or display surfaces require explicit user need or verified blocking issue; otherwise drop/escalate and prefer delete, hide, narrow, or reuse.
+Project each finding into implementation actionability after verification; individual reviewers do not self-authorize it:
+
+- `required_fix`: `spec-required bug` or concrete `current production risk`.
+- `optional_trim`: cleanup/simplification that deletes, narrows, inlines, or reuses.
+- `evidence_note`: validation gap without a proven current bug.
+- `defer`: out-of-scope, adjacent, or deferred surface.
+
+Only `required_fix` justifies new guards, state, schema, validation infra, or broad tests by default. For the rest: use smallest existing proof, delete/narrow/inline/reuse, or omit/defer/escalate.
+Reviewer findings and `Minimal Fix` text are advisory, not patch authorization. New tests, schema/state/metadata, validation infrastructure, labels, or user-facing surfaces require `required_fix` or explicit user scope; otherwise prefer delete, narrow, inline, reuse, omit, or defer.
 For evidence-only findings, also judge whether the proposed verification would materially widen the target repo's validation surface. If yes, keep the finding `near-blocking` unless there is already concrete bug evidence or the heavier verification is part of the repo's established CI path.
 Renumber finding IDs and assign the final severity level.
 
@@ -123,12 +127,18 @@ Verdict values:
 
 Output format
 
+Keep output compact: verdict first with target and selected goals, then verified blocking findings, then at most the top 5 near-blocking findings unless the user asks for exhaustive review. Include omitted near-blocking count/categories when capped. Near-blocking findings do not fail the verdict; high-risk evidence gaps may still require `needs_escalation`.
+
 ```markdown
 **Verdict:** `pass` / `fail` / `needs_escalation`
+Target: <artifact/revision>
+Goals: <selected goals>
+Omitted near-blocking: <none | count/categories>
 
 ### F-001
 
 Severity: `near-blocking` / `blocking`
+Actionability: `required_fix` / `optional_trim` / `evidence_note` / `defer`
 Finding: <factual description>
 Impact: <impact description>
 Trigger: <trigger condition>

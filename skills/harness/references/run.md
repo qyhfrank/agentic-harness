@@ -153,7 +153,7 @@ After Baseline passes:
 - If `steps[]` exhausted (`current_step >= len(steps)`) or empty: scope to the approach `hypothesis`
 - Scan `Durable Notes` for `[dead-end]`, `[constraint]` relevant to this milestone/approach
 - Non-trivial changes: converge on approach first; invoke `/brainstorming` when needed
-- When expanding a step into a round, follow `references/plan.md` step content standards (file mapping, code blocks, verification commands, no-placeholder rules)
+- When expanding a step into a round, follow `references/plan.md` step content standards (file mapping, intended change, verification commands, no-placeholder rules)
 - Obey `task.protocol` and `execution_policy` (`dangerous_commands` require human approval; `secret_patterns` never read or staged)
 - When `task.protocol` is `tdd_required` or `tdd_preferred`, or the current round writes tests, fixtures, or mocks, load `references/tdd-discipline.md`
 - When `task.protocol = tdd_required` and the round changes production behavior, execute the RED proof before patching and record the failing reproduction, proof command, and failure evidence in `Decisions` or `artifacts/round-{N}/manifest.json`
@@ -161,12 +161,12 @@ After Baseline passes:
 - Keep the implementation boundary minimal after RED evidence is recorded
 - One atomic round at a time; if the description needs "and" to explain, split into multiple rounds
 - **Post-revert guard:** if the previous round was `reverted`, this round's proposal must state the single hypothesis being tested and cite evidence from the failed round. Without both, investigate first — do not generate a patch
-- **Reviewer-driven fix guard:** Treat `/critique`, `/fanout`, and reviewer fixes as advisory. Before patching, check for new wording, output shape, fields, metadata, state, validation infra, or surfaces; implement only explicit user needs or verified blocking fixes, otherwise record non-blocking and delete, hide, narrow, or reuse.
+- **Reviewer-driven fix guard:** Treat `/critique`, `/fanout`, and reviewer fixes as advisory. Before patching accepted or gate-relevant findings, record a compact acceptance map in `Decisions` or the round note: `F-001 -> classification -> actionability -> chosen_action`. Auto-implement only `required_fix`; apply `optional_trim` only when deleting, narrowing, inlining, or reusing; `evidence_note` and `defer` cannot expand implementation or create code/test/schema/UI surfaces. Near-blocking does not block `done` unless the verdict is `needs_escalation`, exit criteria/checks require it, or source verification promotes it to current production risk.
 
 ### Cleanup
 
 - Do not skip cleanup after implementing `/critique`, `/fanout`, or reviewer findings; compare the diff to the original goal and explicit non-goals before commit.
-- For reviewer-driven rounds, classify added guards, state, tests, metadata, validation surfaces, and user-facing surfaces as `keep|fix|delete|defer`; keep only explicit requirements or verified blocking fixes, otherwise delete, narrow, inline, or reuse.
+- For reviewer-driven rounds, re-read the diff against the acceptance map; keep only explicit requirements or `required_fix`, otherwise delete, narrow, inline, or reuse.
 - Skip for small changes (< ~20 LOC, <= 3 files, no prior-round revert)
 - Re-read diff, check reuse / simplicity / efficiency
 
@@ -184,7 +184,7 @@ Checks with `action` starting with `/` are dispatched as skill calls; verdict wr
 
 Run checks exactly as written in `config.yaml`. If a check's command, order, or membership changes, update `config.yaml` before Verify runs.
 
-Evidence: stdout/stderr + `artifacts/round-{N}/manifest.json`. Manifest verification entries list only executed checks, and each `command` matches the configured `action`. Short-circuited checks are omitted. Any other skip needs an explicit recorded reason, or the round escalates as contract drift.
+Evidence: stdout/stderr + `artifacts/round-{N}/manifest.json`. Manifest verification entries list only executed checks, and each `command` matches the configured `action`. A gate passes only from its configured action on the current commit, or a same-commit manifest entry with the same action and unchanged target/scope; ad hoc/manual checks are evidence notes, not gate results. Short-circuited checks are omitted. Any other skip needs an explicit recorded reason, or the round escalates as contract drift.
 
 ### Evaluate
 
@@ -193,7 +193,7 @@ First match wins:
 1. Any failure (check fail / crash / hook blocked / timeout) -> `reverted` (reason field distinguishes)
 2. verification escalated -> `escalated`, pause for human
 3. `optimize` and `metric.delta` is non-null and < `min_delta` -> `reverted` (reason: `below_threshold`)
-4. objective met -> `done` (satisfy: all checks pass; optimize: all pass + target reached)
+4. objective met -> `done` only when the task objective and active milestone `exit_criteria` are satisfied and required checks pass (checks passing alone -> `kept`; optimize also needs target reached)
 5. otherwise -> `kept`
 
 **Revert post-actions (only when reverted):**
