@@ -63,15 +63,16 @@ Finalize in this order:
 
 ### Checks contract
 
-Each check shape: `{name, action, cost: cheap|medium|expensive}`.
+Each check shape: `{name, kind, action, cost: cheap|medium|expensive}`.
 
 - `name`: unique identifier for the check, referenced by `verification.gates` and `metric.sample_check`
+- `kind`: `command` for shell commands, `review` for skill-backed review gates such as `/critique`
 - `action`: command or skill to execute (e.g., shell command, `/critique -a gpt-5.5:6`)
 - `cost`: determines execution order (`cheap -> medium -> expensive`)
 - `checks[]` must contain at least 1 check before setup completes
 - `checks[]` is the runtime verification contract, not the done condition. After setup, change the command, order, or membership in `config.yaml` before Verify uses the new shape.
 
-Example: `{name: unit-tests, action: "pytest tests/", cost: cheap}`
+Example: `{name: unit-tests, kind: command, action: "pytest tests/", cost: cheap}`
 
 User-requested named skill gates (for example `/critique` or `$critique`) phrased as check/gate/must-pass/before-done/acceptance must be written as `checks[].action` starting with that skill command; prose/manual-review notes do not satisfy the gate. If the mention is only advisory, ask whether it belongs outside harness checks.
 
@@ -146,7 +147,7 @@ task: { id: "<task_id>", description: "<goal from user>", protocol: direct, base
 
 boundary: { mutable: [], immutable: [] }  # repo-root-relative path list; directories mean the full subtree; no globs
 
-checks: []  # {name, action, cost: cheap|medium|expensive}; execution order cheap -> medium -> expensive
+checks: []  # {name, kind, action, cost: cheap|medium|expensive}; execution order cheap -> medium -> expensive
 
 evaluation:
   objective: satisfy          # satisfy|optimize

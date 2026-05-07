@@ -56,6 +56,8 @@ The critique launcher must provide the review artifact and enough context to jud
 ### Review capsule
 Before dispatch, define the target artifact/revision, original goal, selected goals, and known non-goals or scope boundaries when provided or material. Choose the smallest goal set needed for the asked decision: targeted simplification usually uses Goal 1 + Goal 5; durable-state, permission, concurrency, retry, or rollback risk adds Goal 4. If missing context materially affects judgment, return `needs_escalation` instead of broadening scope.
 
+When the review target is a harness task, scope reviewers to `boundary.mutable` plus the current round's touched files by default. Treat `boundary.immutable`, unrelated dirty files, and pre-existing workspace drift as out of scope unless the review request explicitly includes them. Include this scope boundary in the reviewer prompt so unrelated dirty-tree state does not become a finding.
+
 ## Step 3: Dispatch reviewers via `/fanout -m sample`
 
 Review is Thinker work. Default reviewer agent type is `gpt`. Refer to `using-agents`, use gpt-5.5 xhigh (for Codex CLI) or load `/codex-exec` (for Claude Code) first.
