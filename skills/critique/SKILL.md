@@ -58,6 +58,8 @@ Before dispatch, define the target artifact/revision, original goal, selected go
 
 When the review target is a harness task, scope reviewers to `boundary.mutable` plus the current round's touched files by default. Treat `boundary.immutable`, unrelated dirty files, and pre-existing workspace drift as out of scope unless the review request explicitly includes them. Include this scope boundary in the reviewer prompt so unrelated dirty-tree state does not become a finding.
 
+When the target is a git branch or worktree, include the exact review base and candidate revision in the review capsule. For harness tasks, derive the base from the task baseline or recorded round base, not from the current `main` by default. If `main` or the base branch has advanced since task setup, do not use `main..HEAD` unless that is explicitly the intended review range. If the correct base cannot be determined, return `needs_escalation` and request the missing base instead of dispatching reviewers against a guessed range.
+
 ## Step 3: Dispatch reviewers via `/fanout -m sample`
 
 Review is Thinker work. Default reviewer agent type is `gpt`. Refer to `using-agents`, use gpt-5.5 xhigh (for Codex CLI) or load `/codex-exec` (for Claude Code) first.
@@ -68,7 +70,7 @@ If reviewer dispatch is blocked by execution-surface unavailability, policy, or 
 
 - Agent Context Card, such as `Agent: reviewer | depth 1/1 | budget 0 | parent: critique`
 - Reviewer agent type: `gpt` by default for critique unless the user explicitly overrides it
-- Review target and scope materials, such as a diff, files, a plan, or another artifact
+- Review target and scope materials, such as a diff, files, a plan, or another artifact. For git review targets, include the base revision, candidate revision, and diff range reviewers must use.
 - Goal name, review angle, coverage target, and review standard
 - Finding format and constraints: report only non-speculative issues with a real anchor; skip purely stylistic or speculative suggestions; avoid scope expansion unless required to fix a verified issue; if the target materials explicitly defer a surface, do not treat lack of support itself as a finding unless the artifact claims support or omission creates a concrete current risk
 - Preserve explicit user wording and surfaces. If context gives exact labels, output shape, fields, or "do not use X", do not propose alternate labels/fields/surfaces unless required by a verified bug; prefer delete, hide, narrow, or reuse.
