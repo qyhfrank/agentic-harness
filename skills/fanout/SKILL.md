@@ -52,3 +52,4 @@ Factual outputs must be verified against source code.
 
 - split: each agent returns output separately, no aggregation
 - sample: after all N outputs arrive, run GSA = Generative Self-Aggregation (consensus/divergence, evidence alignment, dedup, discard unsupported conclusions)
+- When the user explicitly asks for fanout plus GSA before implementation or durable rule/doc updates, wait for the requested sample quorum and complete GSA before writing. If execution must proceed before quorum, state the deviation and get user approval first.
