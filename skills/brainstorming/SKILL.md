@@ -7,8 +7,6 @@ description: "You MUST use this before any creative work - creating features, bu
 
 Help turn ideas into fully formed designs and specs through natural collaborative dialogue.
 
-Start by understanding the current project context, then ask questions one at a time to refine the idea. Once you understand what you're building, present the design and get user approval.
-
 <HARD-GATE>
 Do NOT invoke any implementation skill, write any code, scaffold any project, or take any implementation action until you have presented a design and the user has approved it. This applies to EVERY project regardless of perceived simplicity.
 Even one-function utilities and config changes go through a short design.
@@ -126,33 +124,11 @@ milestones:                  # goal decomposition (2-5 ordered milestones)
         score: 55
 ```
 
-Field mapping to harness state files:
-
-- `goal` -> `config.yaml task.description`
-- `done_when_hint` -> `config.yaml task.done_when`
-- `boundary_hints` -> `config.yaml boundary`
-- `protocol_hint` -> `config.yaml task.protocol`
-- `check_hints` -> `config.yaml checks[]`
-- `planning_context` -> `plan.yaml.planning_context` (intent anchors, not contract truth)
-- `milestones` -> `plan.yaml.milestones[]`; caller snapshots full YAML as plan source, Bootstrap may enrich/restructure while preserving valid refs/rankings
+Harness mapping: `goal` -> `task.description`, `done_when_hint` -> `task.done_when`, `boundary_hints` -> `boundary`, `protocol_hint` -> `task.protocol`, `check_hints` -> `checks[]`, `planning_context` -> `plan.yaml.planning_context`, `milestones` -> `plan.yaml.milestones[]`. Caller owns validation and snapshots full YAML as plan source.
 
 ### Embedded Checklist
 
-Embedded mode runs a subset of the standalone checklist. Steps marked with *skip* are the caller's responsibility.
-
-1. **Explore project context** — same as standalone
-2. **Ask clarifying questions** — same as standalone (one at a time, multiple choice preferred)
-3. **Propose 2-3 approaches** — same as standalone (with trade-offs and recommendation)
-4. **Produce output YAML** — emit the structured output block above; do not write a spec document
-
-Skipped in embedded mode:
-- Visual Companion (caller manages its own UI)
-- Design doc writing and git commit
-- Spec self-review
-- User review gate (caller handles approval through its own contract flow)
-- Terminal invocation of writing-plans or any other skill
-
-The caller receives the YAML output and resumes its own workflow. Brainstorming does not control what happens next.
+Embedded mode: explore context, ask clarifying questions, propose 2-3 approaches, then emit the YAML block above. Skip Visual Companion, design doc/commit, spec self-review, standalone user-review gate, and terminal invocation of other skills. Caller owns approval, mapping, and next workflow.
 
 ### Mode Detection
 
@@ -165,7 +141,7 @@ caller: /harness setup
 goal: "<raw user goal>"
 ```
 
-When this preamble is present, follow the Embedded Checklist. When absent, follow the standalone Checklist (steps 1-9).
+When this preamble is present, follow Embedded Mode. When absent, follow the standalone Checklist (steps 1-9).
 
 ## Visual Companion
 

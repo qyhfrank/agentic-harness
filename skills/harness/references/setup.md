@@ -38,8 +38,6 @@ plan_sources: [<external plan summaries, if any>]
 
 All values remain advisory until Step 4 finalizes them. The user confirms or overrides each field during contract finalization.
 
-**Milestone handoff:** `setup:new` writes a pending seed; run Bootstrap activates/enriches it and records deviations.
-
 ## Step 3: Plan-Guided Codebase Discovery
 
 Use the seed plan to inspect named files, implied modules, dependencies, checks, risks, open questions, relevant tests, build/lint/CI, docs/guidance, verification suites, and golden commands. Tighten `boundary`, `task.done_when`, `task.protocol`, `checks[]`, `evaluation`, and milestone exit criteria before asking. If code facts invalidate the seed, revise it before Step 4; use embedded brainstorming again unless the repaired task is very simple.
@@ -69,8 +67,6 @@ Each check shape: `{name, kind, action, cost: cheap|medium|expensive}`.
 - `cost`: determines execution order (`cheap -> medium -> expensive`)
 - `checks[]` must contain at least 1 check before setup completes
 - `checks[]` is the runtime verification contract, not the done condition. After setup, change the command, order, or membership in `config.yaml` before Verify uses the new shape.
-
-Example: `{name: unit-tests, kind: command, action: "pytest tests/", cost: cheap}`
 
 User-requested named skill gates (for example `/critique` or `$critique`) phrased as check/gate/must-pass/before-done/acceptance must be written as `checks[].action` starting with that skill command; prose/manual-review notes do not satisfy the gate. If the mention is only advisory, ask whether it belongs outside harness checks.
 
@@ -106,16 +102,7 @@ Choose the `.harness/` location before creating task state:
 2. Generate `task_slug`, allocate `task_id`, create `.harness/tasks/<task_id>/` and `artifacts/setup/`
 3. If inside a git repo, prefer `.git/info/exclude` for `.harness/` and `.worktree/`
 4. Write `config.yaml`: `task.id = <task_id>`, `task.description = <goal>`, `task.done_when = <observable done condition>`, `task.base_branch` = current branch, remaining fields per Appendix A skeleton. No `<...>` placeholders
-5. Write `context.md` initial snapshot:
-   - `phase: setup (complete)`
-   - `round: 0 / -`
-   - `current_objective: "<goal>"`
-   - `best_result: "baseline not recorded yet"`
-   - `last_action: "setup completed; ready for run preflight"`
-   - `Working Memory`: empty
-   - `Durable Notes`: empty
-   - `Decisions`: empty
-   - `Next Steps`: `Run preflight; on success, record baseline and enter round 1.`
+5. Write `context.md`: generate Current State as no-events per `references/run.md`; manual sections empty; `last_action: "setup completed; ready for run preflight"`; Next Steps: `Run preflight; on success, record baseline and enter round 1.`
 6. Write `state.jsonl`: initialize as empty file
 7. Write `plan.yaml`: use `references/plan.md`; include `plan_sources[]`, `planning_context`, and seeded `milestones[]` from the normalized plan. Set `strategy.status: pending`, `active_milestone_id: null`. Empty `milestones[]` is only allowed for legacy repair when no plan source exists.
 

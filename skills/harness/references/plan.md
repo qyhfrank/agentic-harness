@@ -54,9 +54,7 @@ milestones:
         # revert_streak, last_failure_family: omitted at bootstrap; created on first revert
 ```
 
-Field notes: `version` bumps only on structural replan. `plan_sources[]` records seed origin; `artifact_path` points to the full external/embedded plan snapshot. Snapshots are evidence, not control truth. `planning_context` holds compact intent anchors from the plan; contract fields stay in `config.yaml`; contract-blocking `open_questions` keep setup open. `source_refs[]` cite source ids. `exit_criteria` must reference a check, artifact, or observable code-state claim. `score` ranks approaches; it is not probability. `evidence_for/against` are one-line summaries; full evidence stays in `artifacts/`.
-
-Setup writes populated pending `milestones[]`; run Bootstrap activates/enriches after baseline. Empty `milestones[]` is legacy/repair fallback only.
+Field notes: `version` bumps only on structural replan. `plan_sources[].artifact_path` points to the full external/embedded snapshot; snapshots are evidence, not control truth. `planning_context` holds intent anchors; contract fields stay in `config.yaml`; contract-blocking `open_questions` keep setup open. `source_refs[]` cite source ids. `exit_criteria` must reference a check, artifact, or observable code-state claim. `score` ranks approaches, not probability. `evidence_for/against` are summaries; full evidence stays in `artifacts/`. Setup writes populated pending `milestones[]`; empty is legacy/repair fallback only.
 
 ### Approach steps
 

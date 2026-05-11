@@ -67,17 +67,10 @@ Append-only. `metric` field present only for optimize. Add `evaluation.reason` w
 {"event":"round_completed","task_id":"…","ts":"…","round":1,"commit":"<sha|null>","verification":{"status":"pass|fail|escalated","gates":{"<check>":"pass|fail|escalated"}},"evaluation":{"result":"kept|reverted|escalated|done"},"controller":{"version":1,"milestone_id":"M1","approach_id":"A1","approach_decision":"continue|demote|failed|complete|task_done|blocked","strategy_signal":"none|all_approaches_exhausted|new_constraint","next_milestone_id":"M2|null"},"metric":{"value":0,"delta":0},"summary":"…"}
 ```
 
-```json
-{"event":"harness_stopped","task_id":"…","ts":"…","round":3,"reason":"done|escalated|max_rounds|stagnation","summary":"…"}
-```
-
-```json
-{"event":"task_disposed","task_id":"…","ts":"…","round":3,"disposition":"merged|kept|discarded","summary":"…"}
-```
-
-```json
-{"event":"strategy_updated","task_id":"…","ts":"…","round":3,"version":2,"reason":"bootstrap|replan|reopen","trigger":"<freetext>","active_milestone_id":"M2","summary":"…"}
-```
+Compact events:
+- `harness_stopped`: `{event, task_id, ts, round, reason: done|escalated|max_rounds|stagnation, summary}`
+- `task_disposed`: `{event, task_id, ts, round, disposition: merged|kept|discarded, summary}`
+- `strategy_updated`: `{event, task_id, ts, round, version, reason: bootstrap|replan|reopen, trigger, active_milestone_id, summary}`
 
 Invariants:
 
@@ -90,7 +83,6 @@ Invariants:
 - `strategy_updated` may follow `round_completed` or `baseline_recorded` for non-linear transitions; `version` strictly increments on `reason: replan`
 - `trigger` is freetext describing why the strategy changed; recommended values: `initial`, `replan`, `reopen`, `new_constraint`. Routing uses structured fields, not trigger matching
 - final task completion is encoded as `evaluation.result: done` with `controller.approach_decision: task_done`; do not encode terminal completion as `kept + strategy_signal: done`
-- `state.jsonl` = event truth; `context.md` = live working state
 
 ### `plan.yaml`
 
@@ -167,7 +159,7 @@ After Baseline passes:
 
 ### Cleanup
 
-- After `/critique`, `/fanout`, or reviewer fixes, compare diff to goal/non-goals and acceptance map; keep only explicit requirements or `required_fix`, otherwise delete, narrow, inline, or reuse.
+- After reviewer fixes, compare diff to goal/non-goals and acceptance map; keep only explicit requirements or `required_fix`, otherwise delete, narrow, inline, or reuse.
 - Skip for small changes (< ~20 LOC, <= 3 files, no prior-round revert)
 - Re-read diff, check reuse / simplicity / efficiency
 
@@ -240,7 +232,7 @@ Write these to `artifacts/round-{N}/investigation.md` and reference in `Durable 
 
 Translate round verdict into plan-level actions per `references/plan.md` Adapt Decision Table, then update `plan.yaml`.
 
-Run-layer invariants: `evaluation.result = done` pairs with `approach_decision = task_done`; milestone completion uses `kept + approach_decision = complete`; `approach_decision` maps to approach status (`failed`, `blocked`, `done`). Stop-check handles escalated/blocked outcomes.
+Verdict-to-decision mapping is canonical in `references/plan.md`; stop-check handles escalated/blocked outcomes.
 
 ### Record
 
