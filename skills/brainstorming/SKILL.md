@@ -11,11 +11,8 @@ Start by understanding the current project context, then ask questions one at a 
 
 <HARD-GATE>
 Do NOT invoke any implementation skill, write any code, scaffold any project, or take any implementation action until you have presented a design and the user has approved it. This applies to EVERY project regardless of perceived simplicity.
+Even one-function utilities and config changes go through a short design.
 </HARD-GATE>
-
-## Anti-Pattern: "This Is Too Simple To Need A Design"
-
-Every project goes through this process. A todo list, a single-function utility, a config change — all of them. "Simple" projects are where unexamined assumptions cause the most wasted work. The design can be short (a few sentences for truly simple projects), but you MUST present it and get approval.
 
 ## Checklist
 
@@ -30,44 +27,6 @@ You MUST create a task for each of these items and complete them in order:
 7. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
 8. **User reviews written spec** — ask user to review the spec file before proceeding
 9. **Transition to next step** — offer the user a choice: hand off to `/harness` for adaptive execution, or stop here (user decides next step independently)
-
-## Process Flow
-
-```dot
-digraph brainstorming {
-    "Explore project context" [shape=box];
-    "Visual questions ahead?" [shape=diamond];
-    "Offer Visual Companion\n(own message, no other content)" [shape=box];
-    "Ask clarifying questions" [shape=box];
-    "Propose 2-3 approaches" [shape=box];
-    "Present design sections" [shape=box];
-    "User approves design?" [shape=diamond];
-    "Write design doc" [shape=box];
-    "Spec self-review\n(fix inline)" [shape=box];
-    "User reviews spec?" [shape=diamond];
-    "Next step?" [shape=diamond];
-    "Hand off to /harness" [shape=doublecircle];
-    "Stop\n(user decides)" [shape=doublecircle];
-
-    "Explore project context" -> "Visual questions ahead?";
-    "Visual questions ahead?" -> "Offer Visual Companion\n(own message, no other content)" [label="yes"];
-    "Visual questions ahead?" -> "Ask clarifying questions" [label="no"];
-    "Offer Visual Companion\n(own message, no other content)" -> "Ask clarifying questions";
-    "Ask clarifying questions" -> "Propose 2-3 approaches";
-    "Propose 2-3 approaches" -> "Present design sections";
-    "Present design sections" -> "User approves design?";
-    "User approves design?" -> "Present design sections" [label="no, revise"];
-    "User approves design?" -> "Write design doc" [label="yes"];
-    "Write design doc" -> "Spec self-review\n(fix inline)";
-    "Spec self-review\n(fix inline)" -> "User reviews spec?";
-    "User reviews spec?" -> "Write design doc" [label="changes requested"];
-    "User reviews spec?" -> "Next step?" [label="approved"];
-    "Next step?" -> "Hand off to /harness" [label="execute with harness"];
-    "Next step?" -> "Stop\n(user decides)" [label="stop here"];
-}
-```
-
-**Terminal states:** After the user approves the spec, offer two options: hand off to `/harness` for adaptive execution, or stop (user decides next step). Do NOT invoke writing-plans, frontend-design, mcp-builder, or any other implementation skill directly.
 
 ## The Process
 
@@ -97,10 +56,7 @@ digraph brainstorming {
 
 **Design for isolation and clarity:**
 
-- Break the system into smaller units that each have one clear purpose, communicate through well-defined interfaces, and can be understood and tested independently
-- For each unit, you should be able to answer: what does it do, how do you use it, and what does it depend on?
-- Can someone understand what a unit does without reading its internals? Can you change the internals without breaking consumers? If not, the boundaries need work.
-- Smaller, well-bounded units are also easier for you to work with - you reason better about code you can hold in context at once, and your edits are more reliable when files are focused. When a file grows large, that's often a signal that it's doing too much.
+- Break work into small units with one purpose, clear interfaces, explicit dependencies, and independent tests. If consumers must read internals or edits require broad context, improve boundaries inside the design scope.
 
 **Working in existing codebases:**
 
@@ -110,47 +66,9 @@ digraph brainstorming {
 
 ## After the Design
 
-**Documentation:**
+Write the validated spec to `.context/plans/YYYY-MM-DD-<topic>.md` unless user preferences override. Ensure `.context/specs` is listed in `.gitignore`. Self-review: fix placeholders, contradictions, ambiguity, and scope creep inline. Then ask the user to review the written spec; revise if requested. After approval, offer only: hand off to `/harness` with the spec as context, or stop.
 
-- Write the validated design (spec) to `.context/plans/YYYY-MM-DD-<topic>.md`
-  - (User preferences for spec location override this default)
-- Ensure `.context/specs` is listed in `.gitignore`
-- Use elements-of-style:writing-clearly-and-concisely skill if available
-
-**Spec Self-Review:**
-After writing the spec document, look at it with fresh eyes:
-
-1. **Placeholder scan:** Any "TBD", "TODO", incomplete sections, or vague requirements? Fix them.
-2. **Internal consistency:** Do any sections contradict each other? Does the architecture match the feature descriptions?
-3. **Scope check:** Is this focused enough for a single implementation plan, or does it need decomposition?
-4. **Ambiguity check:** Could any requirement be interpreted two different ways? If so, pick one and make it explicit.
-
-Fix any issues inline. No need to re-review — just fix and move on.
-
-**User Review Gate:**
-After the spec review loop passes, ask the user to review the written spec before proceeding:
-
-> "Spec written to `<path>`. Please review it and let me know if you want to make any changes before we proceed."
-
-Wait for the user's response. If they request changes, make them and re-run the spec review loop. Only proceed once the user approves.
-
-**Next step:**
-
-After the user approves the spec, present two options:
-
-1. **Hand off to `/harness`** — invoke `/harness` with the spec as context for adaptive execution
-2. **Stop here** — the user decides what to do next (manual implementation, hand off to someone else, etc.)
-
-Do NOT invoke writing-plans, executing-plans, or any other implementation skill directly.
-
-## Key Principles
-
-- **One question at a time** - Don't overwhelm with multiple questions
-- **Multiple choice preferred** - Easier to answer than open-ended when possible
-- **YAGNI ruthlessly** - Remove unnecessary features from all designs
-- **Explore alternatives** - Always propose 2-3 approaches before settling
-- **Incremental validation** - Present design, get approval before moving on
-- **Be flexible** - Go back and clarify when something doesn't make sense
+Do NOT invoke writing-plans, executing-plans, frontend-design, mcp-builder, or other implementation skills directly.
 
 ## Embedded Mode
 
@@ -164,6 +82,7 @@ Embedded mode produces a YAML block that the caller consumes directly. All field
 
 ```yaml
 goal: "<refined, verifiable goal statement>"
+done_when_hint: "<observable acceptance condition>"
 
 boundary_hints:
   mutable:
@@ -178,26 +97,44 @@ check_hints:                 # suggested verification checks
     action: "<shell command or skill call>"
     cost: cheap              # cheap | medium | expensive
 
+planning_context:            # compact intent anchors for harness; omit empty keys
+  non_goals:
+    - "<explicit out-of-scope item>"
+  constraints:
+    - "<hard constraint>"
+  assumptions:
+    - "<assumption to verify>"
+  decisions:
+    - "<user-approved decision>"
+  risks:
+    - "<known risk>"
+  open_questions:
+    - "<non-blocking question; contract-blocking questions must be asked before output>"
+
 milestones:                  # goal decomposition (2-5 ordered milestones)
   - title: "<milestone title>"
     objective: "<what this milestone achieves>"
     exit_criteria: "<verifiable condition>"
     approaches:
       - hypothesis: "<approach description and rationale>"
+        rationale: "<why this ranks here>"
+        risk_notes:
+          - "<approach-specific risk>"
         score: 70            # 0-100; spread >= 15 between ranks
       - hypothesis: "<alternative approach>"
+        rationale: "<why this ranks lower/higher>"
         score: 55
 ```
 
 Field mapping to harness state files:
 
-| Output field | Harness target | Notes |
-|---|---|---|
-| `goal` | `config.yaml task.description` | Replaces raw user input with refined statement |
-| `boundary_hints` | `config.yaml boundary` | Setup Step 3 finalizes; hints may be expanded or narrowed |
-| `protocol_hint` | `config.yaml task.protocol` | Suggestion based on task fit; use `tdd_preferred` when fail-first should be the default and can be proven with an automated test or the smallest reproducible script, `tdd_required` when behavior-changing implementation rounds must prove that failing reproduction before code |
-| `check_hints` | `config.yaml checks[]` | At least 1 check required; setup adds/adjusts |
-| `milestones` | `plan.yaml milestones[]` | Bootstrap Strategy may restructure; approach scores are starting points |
+- `goal` -> `config.yaml task.description`
+- `done_when_hint` -> `config.yaml task.done_when`
+- `boundary_hints` -> `config.yaml boundary`
+- `protocol_hint` -> `config.yaml task.protocol`
+- `check_hints` -> `config.yaml checks[]`
+- `planning_context` -> `plan.yaml.planning_context` (intent anchors, not contract truth)
+- `milestones` -> `plan.yaml.milestones[]`; caller snapshots full YAML as plan source, Bootstrap may enrich/restructure while preserving valid refs/rankings
 
 ### Embedded Checklist
 
@@ -232,19 +169,14 @@ When this preamble is present, follow the Embedded Checklist. When absent, follo
 
 ## Visual Companion
 
-A browser-based companion for showing mockups, diagrams, and visual options during brainstorming. Available as a tool — not a mode. Accepting the companion means it's available for questions that benefit from visual treatment; it does NOT mean every question goes through the browser.
+A browser companion for mockups, diagrams, and visual options. It is a tool, not a mode; acceptance only makes it available for visual questions.
 
 **Offering the companion:** When you anticipate that upcoming questions will involve visual content (mockups, layouts, diagrams), offer it once for consent:
 > "Some of what we're working on might be easier to explain if I can show it to you in a web browser. I can put together mockups, diagrams, comparisons, and other visuals as we go. This feature is still new and can be token-intensive. Want to try it? (Requires opening a local URL)"
 
 **This offer MUST be its own message.** Do not combine it with clarifying questions, context summaries, or any other content. The message should contain ONLY the offer above and nothing else. Wait for the user's response before continuing. If they decline, proceed with text-only brainstorming.
 
-**Per-question decision:** Even after the user accepts, decide FOR EACH QUESTION whether to use the browser or the terminal. The test: **would the user understand this better by seeing it than reading it?**
-
-- **Use the browser** for content that IS visual — mockups, wireframes, layout comparisons, architecture diagrams, side-by-side visual designs
-- **Use the terminal** for content that is text — requirements questions, conceptual choices, tradeoff lists, A/B/C/D text options, scope decisions
-
-A question about a UI topic is not automatically a visual question. "What does personality mean in this context?" is a conceptual question — use the terminal. "Which wizard layout works better?" is a visual question — use the browser.
+**Per-question decision:** use browser only when seeing beats reading: mockups, wireframes, layout comparisons, architecture diagrams, side-by-side designs. Use terminal for requirements, conceptual choices, tradeoffs, text options, and scope. UI topic does not automatically mean visual.
 
 If they agree to the companion, read the detailed guide before proceeding:
 `skills/brainstorming/visual-companion.md`
