@@ -138,11 +138,13 @@ After Preflight passes:
 
 After Baseline passes:
 
-1. Decompose goal into 2-5 ordered milestones with verifiable `exit_criteria`
-2. For the first active milestone, generate 2-3 ranked approaches (initial score spread >= 15); when an approach warrants tactical steps, generate them per `references/plan.md` step content standards
-3. Write `plan.yaml` with `strategy.status: active`, `active_milestone_id: M1`
-4. Emit `strategy_updated(reason=bootstrap, trigger=initial)`
-5. Regenerate `context.md` Current State from ledger + plan.yaml
+1. Read the pending seed in `plan.yaml`.
+2. Validate `plan_sources[]`, `planning_context`, ids/statuses, `source_refs`, and verifiable `exit_criteria`. If contract-blocking `open_questions` remain, stop and return to setup repair.
+3. If `milestones[]` is populated: activate the first pending milestone and top-ranked candidate approach; add approaches/steps only where sparse. Preserve valid imported rankings/source refs; record any split, reorder, insert, or demotion in `strategy_updated.summary`.
+4. If `milestones[]` is empty: generate a legacy seed from the goal, mark source as `legacy_repair`, then activate it.
+5. Write `plan.yaml` with `strategy.status: active`, `active_milestone_id: M1`
+6. Emit `strategy_updated(reason=bootstrap, trigger=<dominant source kind or legacy_repair>)`
+7. Regenerate `context.md` Current State from ledger + plan.yaml
 
 ## Round Lifecycle
 
@@ -165,8 +167,7 @@ After Baseline passes:
 
 ### Cleanup
 
-- Do not skip cleanup after implementing `/critique`, `/fanout`, or reviewer findings; compare the diff to the original goal and explicit non-goals before commit.
-- For reviewer-driven rounds, re-read the diff against the acceptance map; keep only explicit requirements or `required_fix`, otherwise delete, narrow, inline, or reuse.
+- After `/critique`, `/fanout`, or reviewer fixes, compare diff to goal/non-goals and acceptance map; keep only explicit requirements or `required_fix`, otherwise delete, narrow, inline, or reuse.
 - Skip for small changes (< ~20 LOC, <= 3 files, no prior-round revert)
 - Re-read diff, check reuse / simplicity / efficiency
 
@@ -237,34 +238,9 @@ Write these to `artifacts/round-{N}/investigation.md` and reference in `Durable 
 
 ### Adapt
 
-Translate round verdict into plan-level actions. See `references/plan.md` for the full decision table.
+Translate round verdict into plan-level actions per `references/plan.md` Adapt Decision Table, then update `plan.yaml`.
 
-**Always:**
-1. Update approach: `attempts++`
-
-**If kept:**
-2. If approach has `steps[]`: advance `current_step` when sub-goal is met
-3. Determine `approach_decision` and `strategy_signal`
-4. If `approach_decision = complete`: mark milestone done, advance to next pending milestone; set `controller.next_milestone_id`
-
-**If done:**
-2. Set `strategy.status = done`, mark current milestone and approach as `done`, set `approach_decision = task_done`
-
-**If reverted:**
-2. Classify `failure_scope` for reverted rounds (`execution|hypothesis|environment`)
-3. Adjust `revert_streak` and `score` per delta table
-4. Determine `approach_decision`: `demote` or `failed`
-5. If `approach_decision = failed`: mark approach, activate highest-score candidate
-6. If no candidates remain: `strategy_signal = all_approaches_exhausted`
-
-**If escalated:**
-2. Set `approach_decision = blocked`, `approach.status = blocked`
-3. Stop condition fires at stop-check
-
-**Finally (all outcomes):**
-Update `plan.yaml`
-
-`evaluation.result = done` pairs with `approach_decision = task_done`. Milestone completion uses `kept + approach_decision = complete`. `approach_decision` maps to `approach.status`: `failed → failed`, `blocked → blocked`, `complete → done`.
+Run-layer invariants: `evaluation.result = done` pairs with `approach_decision = task_done`; milestone completion uses `kept + approach_decision = complete`; `approach_decision` maps to approach status (`failed`, `blocked`, `done`). Stop-check handles escalated/blocked outcomes.
 
 ### Record
 
@@ -324,8 +300,9 @@ Action: `escalated` for human architecture review. Do not continue with fanout o
 
 1. Freeze all `status: done` milestones. Never rewrite completed prefix.
 2. Suffix-only: rewrite active + pending milestones. Allowed ops: split, reorder, drop, insert prerequisite.
-3. Generate 2-3 ranked approaches for affected milestones.
-4. `strategy.version += 1`, emit `strategy_updated(reason=replan, trigger=<matching trigger>)`. When the trigger is `new_constraint` or `stagnation`, cite the triggering check, artifact path, or Durable Note tag in `summary`.
+3. Preserve `planning_context` and `source_refs` where intent remains valid; supersede or add a plan source only for explicit external re-import or new strategy evidence.
+4. Generate 2-3 ranked approaches for affected milestones.
+5. `strategy.version += 1`, emit `strategy_updated(reason=replan, trigger=<matching trigger>)`. When the trigger is `new_constraint` or `stagnation`, cite the triggering check, artifact path, or Durable Note tag in `summary`.
 
 **Anti-thrash**: at least 1 completed round between replans; only hard triggers (`new_constraint`, `escalated`) bypass cooldown.
 
@@ -341,8 +318,6 @@ Collect disposition via AskUserQuestion (not inline text). Options: `merge` (wor
 
 ### Commit organization
 
-Merge result = clean intentional history, not working-state dumps.
-
 **Grouping** — milestone → commit:
 
 1. Diff worktree against `base_branch`
@@ -350,17 +325,6 @@ Merge result = clean intentional history, not working-state dumps.
 3. Cross-cutting changes (config, deps, shared types) attach to the milestone that introduced them
 4. One milestone = one commit when cohesive. Split only for clearly separable concerns within a milestone
 
-Single-milestone tasks produce one commit.
-
-**Sequence** — present commit plan for user confirmation before executing:
-
-```
-Proposed commits (oldest → newest):
-  1. feat(auth): add token refresh logic          — M1
-  2. test(auth): add refresh edge-case coverage   — M2
-  3. fix(api): handle expired session in middleware — M3
-```
-
-User confirms or requests re-grouping. Execute: reset worktree to `base_branch`, apply commits in order (Conventional Commits), fast-forward `base_branch`.
+Single-milestone tasks produce one commit. Present an ordered commit plan (`subject — M#`) for user confirmation or regrouping. Then reset worktree to `base_branch`, apply commits in order (Conventional Commits), and fast-forward `base_branch`.
 
 After applying: append `task_disposed` to `state.jsonl`; regenerate `context.md` Current State from ledger (phase: disposed, Next Steps: cleared).

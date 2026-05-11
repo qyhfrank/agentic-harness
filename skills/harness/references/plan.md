@@ -5,23 +5,47 @@
 ```yaml
 version: 1
 
+plan_sources:
+  - id: S1
+    kind: setup_synthesis        # brainstorming_embedded|external_file|setup_synthesis|legacy_repair|replan
+    original_path: null          # user-provided source path, if any
+    artifact_path: null          # artifacts/setup/<source snapshot>, if any
+    sha256: null
+    imported_at: null
+    status: accepted             # accepted|superseded|rejected
+    summary: "..."
+
+planning_context:
+  done_when_hint: null
+  non_goals: []
+  constraints: []
+  assumptions: []
+  decisions: []
+  risks: []
+  open_questions: []
+
 strategy:
   version: 1
   status: pending              # pending|active|done|blocked
   active_milestone_id: null
   last_replan_round: 0
+  source_refs: []
 
 milestones:
   - id: M1
     title: "..."
     objective: "..."
     exit_criteria: "verifiable condition"
-    status: active             # pending|active|done|blocked|dropped
+    source_refs: []
+    status: pending            # pending|active|done|blocked|dropped
     approaches:
       - id: A1
         hypothesis: "..."
+        rationale: "..."
+        risk_notes: []
         score: 70              # 0-100; initial spread >= 15 between ranks
-        status: active         # candidate|active|failed|done|blocked
+        source_refs: []
+        status: candidate      # candidate|active|failed|done|blocked
         steps: []              # ordered sub-steps; optional, populated when approach has multi-step structure
         current_step: 0        # index into steps[]; 0 when steps is empty or first step
         attempts: 0
@@ -30,7 +54,9 @@ milestones:
         # revert_streak, last_failure_family: omitted at bootstrap; created on first revert
 ```
 
-Field notes: `version` bumps only on structural replan (not on milestone advance). `exit_criteria` must reference a check, artifact, or observable code-state claim. `score` is a coarse ranking heuristic, not a probability. `evidence_for/against` store one-line summaries; full evidence stays in `artifacts/`.
+Field notes: `version` bumps only on structural replan. `plan_sources[]` records seed origin; `artifact_path` points to the full external/embedded plan snapshot. Snapshots are evidence, not control truth. `planning_context` holds compact intent anchors from the plan; contract fields stay in `config.yaml`; contract-blocking `open_questions` keep setup open. `source_refs[]` cite source ids. `exit_criteria` must reference a check, artifact, or observable code-state claim. `score` ranks approaches; it is not probability. `evidence_for/against` are one-line summaries; full evidence stays in `artifacts/`.
+
+Setup writes populated pending `milestones[]`; run Bootstrap activates/enriches after baseline. Empty `milestones[]` is legacy/repair fallback only.
 
 ### Approach steps
 
@@ -67,7 +93,7 @@ Granularity: one action per step. If a description needs "and", split it. Target
 
 **Propose expansion:** Steps stored in plan.yaml stay as short strings. During Propose, expand the current step into one executable round with file paths, intended change, and verification command.
 
-**No-placeholder rules** — step expansions fail if they contain TBD/TODO/later, vague "handle edge cases" wording, tests without assertion intent, "similar to step N", undefined types/functions, or prose-only implementation when exact content is required.
+**No-placeholder rules** — step expansions fail on TBD/TODO/later, vague edge-case wording, tests without assertion intent, "similar to step N", undefined types/functions, or prose-only implementation where exact content is required.
 
 ## Approach Lifecycle
 
