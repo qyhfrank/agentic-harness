@@ -24,8 +24,6 @@ argument-hint: "[setup|run] [goal description]"
         round-{N}/           # one directory per round, N starts at 1
 ```
 
-Never write `.harness/` or task state inside a worktree.
-
 ## Route
 
 First match wins:
@@ -46,9 +44,10 @@ First match wins:
 
 1. **Config is the contract.** Repo discovery during setup may suggest values; the written config wins.
 2. **Boundary is law.** Never modify files outside `boundary.mutable`; never touch `boundary.immutable`. If boundary needs expanding after run starts, confirm with user first, then update config.
-3. **Checks and evaluation stay distinct.** Checks produce safety and quality signals; evaluation decides `kept`, `reverted`, `escalated`, or `done`.
-4. **State is append-only.** Lines with subsequent events must not be edited or deleted; the tail (last entry) may be amended in-place before the next append. Milestone advance is encoded in `round_completed.controller.next_milestone_id`; `strategy_updated` is reserved for non-linear transitions (bootstrap, replan, reopen).
-5. **Truth hierarchy.** `state.jsonl` = audit truth (history). `config.yaml` = contract truth. `plan.yaml` = control truth (current intent, sources, strategy, tactics). `context.md` = display layer. `artifacts/setup/` snapshots preserve source plans but never control routing or recovery. On conflict: restore active pointers from ledger events and contract fields from `config.yaml`; structural corruption (missing milestones/approaches/steps) that cannot be rebuilt from pointers -> escalate. Rewrite `context.md` unconditionally.
+3. **Worktree is mandatory.** Never modify repo files on the working branch. Create `.worktree/<task_slug>/` (branch `<task_slug>`) at Preflight; all code changes go there. `.harness/` stays outside the worktree.
+4. **Checks and evaluation stay distinct.** Checks produce safety and quality signals; evaluation decides `kept`, `reverted`, `escalated`, or `done`.
+5. **State is append-only.** Lines with subsequent events must not be edited or deleted; the tail (last entry) may be amended in-place before the next append. Milestone advance is encoded in `round_completed.controller.next_milestone_id`; `strategy_updated` is reserved for non-linear transitions (bootstrap, replan, reopen).
+6. **Truth hierarchy.** `state.jsonl` = audit truth (history). `config.yaml` = contract truth. `plan.yaml` = control truth (current intent, sources, strategy, tactics). `context.md` = display layer. `artifacts/setup/` snapshots preserve source plans but never control routing or recovery. On conflict: restore active pointers from ledger events and contract fields from `config.yaml`; structural corruption (missing milestones/approaches/steps) that cannot be rebuilt from pointers -> escalate. Rewrite `context.md` unconditionally.
 
 ## Integration Overlays
 
