@@ -1,0 +1,45 @@
+{
+  "skill_name": "harness",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Set up a harness task where every milestone must pass $critique before it is marked done.",
+      "expected_output": "The harness config writes an executable review check, not prose or raw fanout.",
+      "expectations": [
+        "checks[] includes kind: review",
+        "checks[].action starts with /critique",
+        "reviewer count and fanout mechanics are not encoded in harness config prose"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Resume a harness carrier whose state.jsonl tail is task_disposed but it lacks a preceding harness_stopped and uses result: completed.",
+      "expected_output": "The harness treats it as terminal legacy/audit state and does not enter the run loop.",
+      "expectations": [
+        "reports a legacy terminal warning",
+        "does not reopen the disposed task",
+        "does not edit historical ledger lines"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Resume a 90-round active harness task with repeated strategy_updated(reason: reopen), pass-no-matches gates, and a context.md that lists every round.",
+      "expected_output": "The harness routes through repair/normalization and prunes display context without losing ledger audit history.",
+      "expectations": [
+        "classifies reason: reopen and semantic gate values as legacy evidence",
+        "new state writes use pass|fail|escalated gate values",
+        "context.md keeps current handoff pointers instead of a per-round catalog"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Set up a sequence of dependent future harness tasks from one long external RFC.",
+      "expected_output": "The harness avoids full materialization of all future carriers and deduplicates stable setup sources.",
+      "expectations": [
+        "creates only the next executable carrier by default or uses lean pending carriers",
+        "reuses digest-addressed shared setup snapshots for identical external sources",
+        "records relevant sections or scoped extracts for long structured plans"
+      ]
+    }
+  ]
+}

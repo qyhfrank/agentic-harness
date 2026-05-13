@@ -35,9 +35,9 @@ initialize -> [propose -> cleanup -> commit -> verify -> evaluate -> investigate
 - ...
 ```
 
-Mutation rules:
+Mutation:
 
-- `Current State`: **generated from state.jsonl + plan.yaml at Record and lifecycle boundaries**. `phase` and `round` always from ledger; `active_milestone`, `active_approach`, `version`, `current_objective`, `best_result` reconciled against ledger (if drift, ledger wins). Generation mapping by last event:
+- `Current State`: **generated from state.jsonl + plan.yaml at Record and lifecycle boundaries**. `phase` and `round` from ledger; active fields and `best_result` reconciled against ledger (ledger wins). Mapping by last event:
 
   | Last event | phase | round | active fields | best_result |
   |---|---|---|---|---|
@@ -50,10 +50,11 @@ Mutation rules:
 
   `best_result` for satisfy: latest `kept|done` round summary. For optimize: summary of event with current `best_value`.
 
-- `Working Memory`: manual, prune every round
-- `Durable Notes`: manual, persist across rounds
-- `Decisions`: manual, append-only
-- `Next Steps`: manual during active run; **generated from ledger after stopped/disposed**
+- `Working Memory`: current handoff pointers only; no per-round commit/artifact catalog.
+- `Durable Notes`: constraints, dead ends, code maps, durable decisions only; no round history or artifact/check bodies.
+- `Decisions`: append-only run-time decisions; do not copy artifact-owned finding/check bodies.
+- `Next Steps`: rewrite from current ledger/plan every lifecycle boundary; **generated from ledger after stopped/disposed**.
+- `context.md` uses only sections above unless this file adds one; evidence = path + one-line summary.
 
 ### `state.jsonl`
 
@@ -70,19 +71,22 @@ Append-only. `metric` field present only for optimize. Add `evaluation.reason` w
 Compact events:
 - `harness_stopped`: `{event, task_id, ts, round, reason: done|escalated|max_rounds|stagnation, summary}`
 - `task_disposed`: `{event, task_id, ts, round, disposition: merged|kept|discarded, summary}`
-- `strategy_updated`: `{event, task_id, ts, round, version, reason: bootstrap|replan|reopen, trigger, active_milestone_id, summary}`
+- `strategy_updated`: `{event, task_id, ts, round, version, reason: bootstrap|replan, trigger, active_milestone_id, summary}`
+- `artifact_recorded`: optional provenance only; never controls routing
 
 Invariants:
 
 - Exactly 1 `baseline_recorded`, at `round: 0`
 - `round_completed.round` strictly increments by 1
 - `harness_stopped`, if present, appears exactly once and immediately after the final `round_completed`
-- `task_disposed`, if present, appears exactly once and must be the last event; must follow `harness_stopped`. A task is closed only when this is the ledger tail
+- `task_disposed`, if present, appears exactly once and must be the last event; should follow `harness_stopped` (missing stop = legacy repair/audit). A task is closed only when this is the ledger tail
 - `kept|done` requires `verification.status: pass`
-- Milestone advance is encoded in `controller.next_milestone_id` (set when `approach_decision = complete`, null otherwise); `strategy_updated` is reserved for non-linear transitions (bootstrap, replan, reopen)
-- `strategy_updated` may follow `round_completed` or `baseline_recorded` for non-linear transitions; `version` strictly increments on `reason: replan`
-- `trigger` is freetext describing why the strategy changed; recommended values: `initial`, `replan`, `reopen`, `new_constraint`. Routing uses structured fields, not trigger matching
-- final task completion is encoded as `evaluation.result: done` with `controller.approach_decision: task_done`; do not encode terminal completion as `kept + strategy_signal: done`
+- Milestone advance is encoded in `controller.next_milestone_id` (set when `approach_decision = complete`, null otherwise); `strategy_updated` is reserved for non-linear transitions (bootstrap, replan)
+- `strategy_updated` may follow `round_completed` or `baseline_recorded` for non-linear transitions; `version` strictly increments on replan
+- `trigger` is freetext; recommended values: `initial`, `replan`, `new_constraint`. Routing uses structured fields, not trigger text
+- final task completion is `evaluation.result: done` with `controller.approach_decision: task_done`; never `kept + strategy_signal: done`
+- `verification.gates` keys match `checks[].name`; values only `pass|fail|escalated`. Semantics like `fails_closed`/`no_matches` live in manifest.
+- New writes use schema events/enums, full SHAs or `null`, and `disposition: merged|kept|discarded`. Unknown events, short commits, structural aliases, missing pre-dispose stop, and `reason: reopen` are migration evidence.
 
 ### `plan.yaml`
 
@@ -99,21 +103,23 @@ Locate `.harness/` and target task, read task state, classify route:
 - **fresh**: no `baseline_recorded`
 - **resume**: has recorded events
 - **recovery**: `state.jsonl` empty but working directory shows progress beyond setup defaults
+- **legacy-audit/repair**: ledger has terminal/structural aliases, `reason: reopen`, or invalid event/result/gate enums; resume only after repair or closeout warning
 
 ### Reconcile (all routes)
 
 - dirty working dir -> [fresh: escalate] [resume/recovery: read diff, continue if aligned with task goal, otherwise escalate]
 - `HEAD` ahead of most recent recorded commit -> read new commits, reconcile with state.jsonl if they look like harness rounds, otherwise escalate
 - recovery: do not delete existing task files or artifacts
-- **resume: if last `round_completed.evaluation.result` is `done` or `escalated`, treat as missing `harness_stopped` and escalate (do not enter Round Lifecycle)**
+- **resume: if last `round_completed.evaluation.result` is `done` or `escalated`, treat as missing `harness_stopped` and escalate; no Round Lifecycle**
+- **resume: if `task_disposed` lacks prior `harness_stopped`, tail is legacy terminal, or only unknown terminal-like events exist, report legacy terminal state; do not reopen disposed tasks**
 - **resume: after reconcile, enter Round Lifecycle directly**
 
 ### Preflight (fresh + recovery)
 
-- Worktree: create if missing (`.worktree/<task_slug>/`, branch = `<task_slug>`); path anomaly -> escalate
+- Worktree: create if missing (`.worktree/<task_slug>/`, branch = `<task_slug>`); reuse sibling worktree/branch only with continuation evidence, else unique slug. Path anomaly -> escalate
 - stale `index.lock` -> delete
 - scope: `boundary.immutable` paths must exist, missing -> escalate
-- run all configured checks; failure -> attempt fix then rerun; unfixable -> update `context.md` (`last_action`, `Next Steps`) then escalate
+- run configured checks from configured cwd; record cwd, repo root, HEAD in manifest. Dependency installs/build bootstrap are setup/preflight evidence, not acceptance evidence; restore lockfile/generated churn unless in `boundary.mutable`. Negative scans fail closed on command errors. Failure -> fix/rerun; unfixable -> update `context.md` (`last_action`, `Next Steps`) then escalate
 
 ### Baseline (fresh + recovery)
 
@@ -132,7 +138,7 @@ After Baseline passes:
 
 1. Read the pending seed in `plan.yaml`.
 2. Validate `plan_sources[]`, `planning_context`, ids/statuses, `source_refs`, and verifiable `exit_criteria`. If contract-blocking `open_questions` remain, stop and return to setup repair.
-3. If `milestones[]` is populated: activate the first pending milestone and top-ranked candidate approach; add approaches/steps only where sparse. Preserve valid imported rankings/source refs; record any split, reorder, insert, or demotion in `strategy_updated.summary`.
+3. If `milestones[]` populated: activate first pending milestone and top-ranked candidate approach; add approaches/steps only where sparse. Preserve valid imported rankings/source refs; record split/reorder/insert/demotion in `strategy_updated.summary`.
 4. If `milestones[]` is empty: generate a legacy seed from the goal, mark source as `legacy_repair`, then activate it.
 5. Write `plan.yaml` with `strategy.status: active`, `active_milestone_id: M1`
 6. Emit `strategy_updated(reason=bootstrap, trigger=<dominant source kind or legacy_repair>)`
@@ -150,12 +156,13 @@ After Baseline passes:
 - When expanding a step into a round, follow `references/plan.md` step content standards (file mapping, intended change, verification commands, no-placeholder rules)
 - Obey `task.protocol` and `execution_policy` (`dangerous_commands` require human approval; `secret_patterns` never read or staged)
 - When `task.protocol` is `tdd_required` or `tdd_preferred`, or the current round writes tests, fixtures, or mocks, load `references/tdd-discipline.md`
-- When `task.protocol = tdd_required` and the round changes production behavior, execute the RED proof before patching and record the failing reproduction, proof command, and failure evidence in `Decisions` or `artifacts/round-{N}/manifest.json`
-- When `task.protocol = tdd_preferred`, do the same by default; for pure docs, config, or other non-behavior rounds, record the skip reason in `Decisions` before generating the patch
+- When `task.protocol = tdd_required` and the round changes production behavior, run RED before patching and record failing reproduction, proof command, and failure evidence in `Decisions` or manifest
+- When `task.protocol = tdd_preferred`, do the same by default; for pure docs/config/non-behavior rounds, record skip reason in `Decisions` before patch
 - Keep the implementation boundary minimal after RED evidence is recorded
 - One atomic round at a time; if the description needs "and" to explain, split into multiple rounds
-- **Post-revert guard:** if the previous round was `reverted`, this round's proposal must state the single hypothesis being tested and cite evidence from the failed round. Without both, investigate first — do not generate a patch
-- **Reviewer-driven fix guard:** Treat `/critique`, `/fanout`, and reviewer fixes as advisory. Before patching accepted or gate-relevant findings, record a compact acceptance map in `Decisions` or the round note: `F-001 -> classification -> actionability -> chosen_action`. Auto-implement only `required_fix`; apply `optional_trim` only when deleting, narrowing, inlining, or reusing; `evidence_note` and `defer` cannot expand implementation or create code/test/schema/UI surfaces. Near-blocking does not block `done` unless the verdict is `needs_escalation`, exit criteria/checks require it, or source verification promotes it to current production risk.
+- Sideband/new objective: classify as dependency, scope expansion, or follow-up. Default new carrier; include here only after user confirms boundary/checks/replan update.
+- **Post-revert guard:** if previous round was `reverted`, proposal must state the single hypothesis and cite failed-round evidence. Without both, investigate first; no patch.
+- **Reviewer-driven fix guard:** Treat `/critique`, `/fanout`, and reviewer fixes as advisory. Before patching accepted/gate-relevant findings, record compact acceptance map: `F-001 -> classification -> actionability -> chosen_action`. Auto-implement only `required_fix`; apply `optional_trim` only for delete/narrow/inline/reuse. `evidence_note` and `defer` cannot expand implementation or create code/test/schema/UI surfaces. Near-blocking blocks `done` only when verdict is `needs_escalation`, exit criteria/checks require it, or source verification promotes it to current production risk.
 
 ### Cleanup
 
@@ -166,24 +173,26 @@ After Baseline passes:
 ### Commit
 
 - Stage only `boundary.mutable`
-- commit message: follow Conventional Commits (`<type>(<scope>): <subject>`). Choose `type` and `scope` from actual change content, not from harness metadata. Do not embed round numbers in the subject.
+- commit message: Conventional Commits (`<type>(<scope>): <subject>`). Choose `type`/`scope` from change content, not harness metadata. No round numbers in subject.
 - hook blocked: save patch to `artifacts/round-{N}/`, reset to pre-round HEAD, mark as `reverted` (reason: `hook_blocked`)
 
 ### Verify
 
 Execute by `cost` group: `cheap -> medium -> expensive`, in list order within each group. Any check fail short-circuits the current group and all higher-cost groups.
 
-Checks with `action` starting with `/` are dispatched as skill calls; verdict written to `verification.gates` (`pass` / `fail` / `escalated`). Map skill verdict `needs_escalation` to gate value `escalated`.
+`kind: review` checks dispatch skill calls; write verdict to `verification.gates` (`pass|fail|escalated`). Map `needs_escalation` to `escalated`. `manual_probe` results are evidence notes unless contract makes them acceptance evidence.
 
 Run checks exactly as written in `config.yaml`. If a check's command, order, or membership changes, update `config.yaml` before Verify runs.
 
-Evidence: stdout/stderr + `artifacts/round-{N}/manifest.json`. Manifest verification entries list only executed checks, and each `command` matches the configured `action`. A gate passes only from its configured action on the current commit, or a same-commit manifest entry with the same action and unchanged target/scope; ad hoc/manual checks are evidence notes, not gate results. Short-circuited checks are omitted. Any other skip needs an explicit recorded reason, or the round escalates as contract drift.
+Evidence: stdout/stderr + `artifacts/round-{N}/manifest.json`. Manifest verification lists only executed checks; each `command` matches configured `action`; each gate key equals `checks[].name`. Gate passes only from configured action on current commit, or same-commit manifest with same action and unchanged target/scope. Ad hoc/manual checks are evidence notes. Omit short-circuited checks. Any other skip needs recorded reason or escalates as contract drift.
+
+Artifact hygiene: compact by default. Exclude binaries, DB snapshots, `node_modules`, `dist`, `__pycache__`, browser profiles, repeated screenshots/logs unless offline repro needs them. Store command/path/hash/size and compact logs; raw heavy artifacts only latest pass/latest failure with reason. Prefer incremental critique diffs, DOM/JSON UI proof, screenshot caps/contact sheets, one compact GSA artifact. `evidence.md` only for RED proof, source review, manual-probe transcript, critique acceptance maps; no manifest check copy.
 
 ### Evaluate
 
 First match wins:
 
-1. Any failure (check fail / crash / hook blocked / timeout) -> `reverted` (reason field distinguishes)
+1. Any failure (check fail / crash / hook blocked / timeout) -> `reverted` (failed review gates with actionable findings are failures, not `strategy_updated(reason=reopen)`)
 2. verification escalated -> `escalated`, pause for human
 3. `optimize` and `metric.delta` is non-null and < `min_delta` -> `reverted` (reason: `below_threshold`)
 4. objective met -> `done` only when the task objective and active milestone `exit_criteria` are satisfied and required checks pass (checks passing alone -> `kept`; optimize also needs target reached)
@@ -197,7 +206,7 @@ Rollback: `revert_commit` = `git revert HEAD --no-edit`; `reset_to_last_pass` = 
 
 **Recording semantics (all outcomes):**
 
-`round_completed.commit` = current HEAD SHA at time of recording (after any rollback). For pre-commit failures, `commit` = `null`. `last_kept_commit` = `commit` of the most recent `round_completed` where `evaluation.result` is `kept` or `done`; falls back to `baseline_recorded.commit` if none exists.
+`round_completed.commit` = current HEAD SHA at recording time after rollback. Pre-commit failure => `null`. `last_kept_commit` = most recent `kept|done` commit, else `baseline_recorded.commit`.
 
 **Metric runtime (optimize):**
 
@@ -209,14 +218,14 @@ Rollback: `revert_commit` = `git revert HEAD --no-edit`; `reset_to_last_pass` = 
 
 ### Investigate (conditional)
 
-Runs between Evaluate and Adapt only when `evaluation.result = reverted` and any of these hold:
+Runs between Evaluate and Adapt only when `evaluation.result = reverted` and any condition holds:
 
 - Same step or failure family reverted a second time
 - `failure_scope` is ambiguous (cannot confidently classify as `execution`)
 - Failure spans multiple components or a deep call chain
 - Error symptoms are migrating across rounds
 
-Skip when cause is self-evident: `hook_blocked`, obvious typo/wrong file, `below_threshold` in optimize mode.
+Skip self-evident causes: `hook_blocked`, obvious typo/wrong file, `below_threshold` in optimize mode.
 
 Produce 5 fields before entering Adapt:
 
@@ -226,7 +235,7 @@ Produce 5 fields before entering Adapt:
 4. `working_vs_broken_diff` — what differs from a working path or reference
 5. `single_hypothesis` — one falsifiable explanation for the failure
 
-Write these to `artifacts/round-{N}/investigation.md` and reference in `Durable Notes`. Adapt uses this investigation to classify `failure_scope` with evidence, rather than defaulting to `execution` on ambiguity.
+Write to `artifacts/round-{N}/investigation.md` and reference in `Durable Notes`. Adapt uses it to classify `failure_scope` instead of defaulting ambiguous failures to `execution`.
 
 ### Adapt
 
@@ -236,11 +245,11 @@ Verdict-to-decision mapping is canonical in `references/plan.md`; stop-check han
 
 ### Record
 
-Update `state.jsonl` (append event) and `context.md` (regenerate Current State from ledger; update manual sections). Write `artifacts/round-{N}/manifest.json` when the round executed checks, changed files, had a skip/short-circuit, or is decision-only. Omit the round artifact dir only for rounds where state.jsonl summary is the sole record needed.
+Update `state.jsonl` and regenerate `context.md`. Write `artifacts/round-{N}/manifest.json` for checks, changes, skips/short-circuits, or decision-only rounds. Omit the round dir only when state summary is enough. After append, prior round artifacts are sealed; corrections go in later errata/manifest.
 
 Refresh native progress mirror (best effort; failures never affect routing, evaluation, or stop conditions).
 
-Decision-only rounds are allowed when no code or config change is needed and `HEAD` stays unchanged. They still write `artifacts/round-{N}/manifest.json` with `changed_files: []` and a note saying whether verification reran or was reused from the prior unchanged commit.
+Decision-only rounds are allowed when no code/config change is needed and `HEAD` stays unchanged. They still write manifest with `changed_files: []` and whether verification reran or reused prior unchanged commit. Pure source-map/evidence-index updates belong in Durable Notes or next implementation manifest unless they change controller/strategy state, satisfy an exit gate, or user requested an audit point.
 
 ## Stop Conditions
 
@@ -259,14 +268,16 @@ When a stop condition fires:
 
 1. Append `harness_stopped` to `state.jsonl` with the matching `reason`
 2. Regenerate `context.md` Current State from ledger (phase: stopped); rewrite `Next Steps` to disposition prompt
-3. Present disposition via AskUserQuestion with options: merge (worktree only), keep, discard
+3. Present disposition (see Disposition)
+
+Before `reason: done`, assert objective met, `controller.next_milestone_id == null`, and no pending non-dropped milestone remains. Defer suffix work by replan/drop/supersede or escalated stop; disposed tasks carry no hidden future work.
 
 ### Doom loop (tactics-level)
 
-Same check fails with same error pattern N times (`doom_loop_threshold`) within the current milestone:
+Same check fails with same error pattern N times (`doom_loop_threshold`) within the current milestone. Repeated critique failures by finding family count:
 
 1. Record pattern in `Durable Notes` (`[dead-end][M#/A#]`)
-2. `/fanout -a codex:6 -m sample` for independent diagnosis with GSA synthesis (in Claude Code, load `/codex-exec` first)
+2. `/fanout -a gpt:6 -m sample` for independent diagnosis with GSA synthesis (in Claude Code, load `/codex-exec` first)
 3. Fanout candidates become new approaches in current milestone (initial `score: 40`, `status: candidate`)
 4. Subsequent rounds consume candidates through normal lifecycle
 5. All exhausted -> `strategy_signal = all_approaches_exhausted` -> triggers replan
@@ -275,7 +286,7 @@ Same check fails with same error pattern N times (`doom_loop_threshold`) within 
 
 Separate from doom loop. Triggers when the current milestone accumulates 3+ reverted rounds covering 2 or more distinct failure families, or when each successive fix exposes coupling in a different location. This pattern suggests the problem is architectural, not tactical.
 
-Action: `escalated` for human architecture review. Do not continue with fanout or replan — the milestone's framing may be wrong.
+Action: `escalated` for human architecture review. Do not continue with fanout or replan; milestone framing may be wrong.
 
 ### Replan Protocol
 
@@ -302,7 +313,7 @@ Action: `escalated` for human architecture review. Do not continue with fanout o
 
 Enter Disposition only after `harness_stopped`. Repo, plan, context, manifest, remote ref, tag, or workflow evidence may prove what happened, but never terminal harness state.
 
-If normal user instructions already performed disposition outside AskUserQuestion (for example merge, push, tag, publish, cleanup, or discard), treat the verified action as disposition evidence and do not ask the same disposition again. If `harness_stopped` is missing, recover through lifecycle first, using the external evidence only to justify the missing terminal round and stop events.
+If normal user instructions already performed disposition outside AskUserQuestion (merge, push, tag, publish, cleanup, discard), treat verified action as disposition evidence and do not ask again. If `harness_stopped` is missing, recover through lifecycle first; external evidence only justifies missing terminal round/stop events.
 
 Collect disposition via AskUserQuestion (not inline text) unless verified out-of-band disposition evidence already exists. Options: `merge` (worktree only), `keep`, `discard`. After user selects:
 
@@ -311,6 +322,8 @@ Collect disposition via AskUserQuestion (not inline text) unless verified out-of
 - **`discarded`**: worktree mode deletes branch + worktree; in-place reverts to `baseline_recorded.commit` (**requires explicit user confirmation**)
 
 `.harness/` is always preserved.
+
+After disposition, retain carriers for audit. Optional archival follows Verify artifact hygiene and preserves `config.yaml`, `plan.yaml`, `context.md`, `state.jsonl`, setup snapshots/pointers, and compact round summaries.
 
 ### Commit organization
 

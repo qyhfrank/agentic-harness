@@ -12,23 +12,26 @@ argument-hint: "[setup|run] [goal description]"
 
 ```text
 .harness/
+  shared/                    # optional deduped immutable setup snapshots by digest
   tasks/
-    <task_id>/               # NNN-<task_slug>. NNN = smallest unused 3-digit number in .harness/tasks/
-                             # task_slug: kebab-case short name derived from goal ([a-z0-9-], <= 36 chars)
+    <task_id>/               # NNN-<task_slug>; NNN = smallest unused unique 3-digit prefix
+                             # task_slug: kebab-case from goal ([a-z0-9-], <= 36 chars)
       config.yaml            # harness contract (static)
       plan.yaml              # control state: intent anchors, source refs, strategy/tactics (mutable)
       context.md             # live working surface and next-step handoff (display)
       state.jsonl            # append-only event ledger (audit truth)
       artifacts/             # evidence written by run
-        setup/               # full setup input snapshots (external plans, embedded brainstorming)
+        setup/               # setup source snapshots or pointers
         round-{N}/           # one directory per round, N starts at 1
 ```
 
 ## Route
 
+Before routing: parse ledger, classify legacy aliases read-only, validate terminal invariants. Active non-canonical ledgers route to repair/recovery and may resume only after canonical repair. Archived legacy carriers may only report a warning.
+
 First match wins:
 
-1. `task_disposed` -> report final summary, do not resume loop
+1. Canonical `task_disposed` ledger tail -> report final summary, do not resume loop
 2. `harness_stopped` in `state.jsonl` without `task_disposed` -> report stop reason and last round summary, present disposition via AskUserQuestion, do not enter round lifecycle
 3. No resolved task -> **setup:new** -> Load `references/setup.md`
 4. Task files incomplete, contract not fully specified, `plan.yaml` missing, `plan.yaml` has empty `milestones[]` without a recorded bootstrap, or an unstarted task lacks plan provenance -> **setup:repair** -> Load `references/setup.md`
@@ -42,12 +45,12 @@ First match wins:
 
 ## Global Invariants
 
-1. **Config is the contract.** Repo discovery during setup may suggest values; the written config wins.
-2. **Boundary is law.** Never modify files outside `boundary.mutable`; never touch `boundary.immutable`. If boundary needs expanding after run starts, confirm with user first, then update config.
+1. **Config is the contract.** Repo discovery may suggest values; written config wins. `config.yaml` is static contract only; strategy, milestones, plan sources, and brainstorming summaries live in `plan.yaml` and `artifacts/setup/`.
+2. **Boundary is law.** `boundary.mutable` governs implementation files, not harness bookkeeping. Current task carrier is implicitly mutable for `context.md`, `state.jsonl`, `plan.yaml`, and new round artifacts; sealed prior round artifacts are append-only evidence and corrections go in later errata/manifest. Sibling carriers are immutable unless being repaired. Never modify outside `boundary.mutable`; never touch `boundary.immutable`. Boundary expansion after run starts requires user confirmation plus config update.
 3. **Worktree is mandatory.** Never modify repo files on the working branch. Create `.worktree/<task_slug>/` (branch `<task_slug>`) at Preflight; all code changes go there. `.harness/` stays outside the worktree.
 4. **Checks and evaluation stay distinct.** Checks produce safety and quality signals; evaluation decides `kept`, `reverted`, `escalated`, or `done`.
-5. **State is append-only.** Lines with subsequent events must not be edited or deleted; the tail (last entry) may be amended in-place before the next append. Milestone advance is encoded in `round_completed.controller.next_milestone_id`; `strategy_updated` is reserved for non-linear transitions (bootstrap, replan, reopen).
-6. **Truth hierarchy.** `state.jsonl` = audit truth (history). `config.yaml` = contract truth. `plan.yaml` = control truth (current intent, sources, strategy, tactics). `context.md` = display layer. `artifacts/setup/` snapshots preserve source plans but never control routing or recovery. On conflict: restore active pointers from ledger events and contract fields from `config.yaml`; structural corruption (missing milestones/approaches/steps) that cannot be rebuilt from pointers -> escalate. Rewrite `context.md` unconditionally.
+5. **State is append-only.** Do not edit/delete lines with later events; tail may be amended before next append. Milestone advance uses `round_completed.controller.next_milestone_id`; `strategy_updated` is for bootstrap/replan only. Legacy `reason: reopen` is read-only recovery evidence. Post-stop scope expansion starts a new task unless user reopens a stopped-not-disposed task; disposed tasks never reopen.
+6. **Truth hierarchy.** `state.jsonl` = audit history. `config.yaml` = contract. `plan.yaml` = current intent/sources/strategy/tactics. `context.md` = display. `artifacts/setup/` snapshots never control routing/recovery. On conflict: restore active pointers from ledger, contract fields from config; unrebuildable structural corruption -> escalate. Rewrite `context.md` unconditionally.
 
 ## Integration Overlays
 
