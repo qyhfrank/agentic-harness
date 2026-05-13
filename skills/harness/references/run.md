@@ -77,7 +77,7 @@ Invariants:
 - Exactly 1 `baseline_recorded`, at `round: 0`
 - `round_completed.round` strictly increments by 1
 - `harness_stopped`, if present, appears exactly once and immediately after the final `round_completed`
-- `task_disposed`, if present, appears exactly once and must be the last event; must follow `harness_stopped`
+- `task_disposed`, if present, appears exactly once and must be the last event; must follow `harness_stopped`. A task is closed only when this is the ledger tail
 - `kept|done` requires `verification.status: pass`
 - Milestone advance is encoded in `controller.next_milestone_id` (set when `approach_decision = complete`, null otherwise); `strategy_updated` is reserved for non-linear transitions (bootstrap, replan, reopen)
 - `strategy_updated` may follow `round_completed` or `baseline_recorded` for non-linear transitions; `version` strictly increments on `reason: replan`
@@ -300,7 +300,11 @@ Action: `escalated` for human architecture review. Do not continue with fanout o
 
 ## Disposition
 
-Collect disposition via AskUserQuestion (not inline text). Options: `merge` (worktree only), `keep`, `discard`. After user selects:
+Enter Disposition only after `harness_stopped`. Repo, plan, context, manifest, remote ref, tag, or workflow evidence may prove what happened, but never terminal harness state.
+
+If normal user instructions already performed disposition outside AskUserQuestion (for example merge, push, tag, publish, cleanup, or discard), treat the verified action as disposition evidence and do not ask the same disposition again. If `harness_stopped` is missing, recover through lifecycle first, using the external evidence only to justify the missing terminal round and stop events.
+
+Collect disposition via AskUserQuestion (not inline text) unless verified out-of-band disposition evidence already exists. Options: `merge` (worktree only), `keep`, `discard`. After user selects:
 
 - **`merged`** (worktree mode only): organize changes into logical commits on `task.base_branch`, delete branch and worktree. See **Commit organization** below.
 - **`kept`**: preserve final code state; worktree mode reports path + branch, in-place preserves current state
@@ -318,5 +322,7 @@ Collect disposition via AskUserQuestion (not inline text). Options: `merge` (wor
 4. One milestone = one commit when cohesive. Split only for clearly separable concerns within a milestone
 
 Single-milestone tasks produce one commit. Present an ordered commit plan (`subject — M#`) for user confirmation or regrouping. Then reset worktree to `base_branch`, apply commits in order (Conventional Commits), and fast-forward `base_branch`.
+
+If disposition rewrites or relocates kept commits (rebase, cherry-pick, squash, regrouping, or applying onto an advanced base), previous `round_completed` entries remain historical only. Before `task_disposed`, rerun configured gates against final HEAD and refresh revision-sensitive evidence (build label, SHA, branch, deployment, or screenshot proof). Record the final merged/kept SHA in `task_disposed.summary` and `context.md`. Example: round 3 passed at `abc`; rebase yields `def`; verify and dispose `def`, leave `abc` unchanged.
 
 After applying: append `task_disposed` to `state.jsonl`; regenerate `context.md` Current State from ledger (phase: disposed, Next Steps: cleared).
