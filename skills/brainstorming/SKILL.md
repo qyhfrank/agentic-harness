@@ -92,6 +92,7 @@ protocol_hint: direct        # direct | tdd_preferred | tdd_required
 
 check_hints:                 # suggested verification checks
   - name: "<check name>"
+    kind: command            # command | review | manual_probe
     action: "<shell command or skill call>"
     cost: cheap              # cheap | medium | expensive
 
@@ -124,7 +125,7 @@ milestones:                  # goal decomposition (2-5 ordered milestones)
         score: 55
 ```
 
-Harness mapping: `goal` -> `task.description`, `done_when_hint` -> `task.done_when`, `boundary_hints` -> `boundary`, `protocol_hint` -> `task.protocol`, `check_hints` -> `checks[]`, `planning_context` -> `plan.yaml.planning_context`, `milestones` -> `plan.yaml.milestones[]`. Caller owns validation and snapshots full YAML as plan source.
+Harness mapping: `goal` -> `task.description`, `done_when_hint` -> `task.done_when`, `boundary_hints` -> `boundary`, `protocol_hint` -> `task.protocol`, `check_hints` -> `checks[]`, `planning_context` -> `plan.yaml.planning_context`, `milestones` -> `plan.yaml.milestones[]`. Caller owns validation, infers missing check `kind`, and snapshots full YAML as plan source.
 
 ### Embedded Checklist
 
