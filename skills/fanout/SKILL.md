@@ -12,45 +12,34 @@ Arguments: $ARGUMENTS
 
 ## Ownership Boundary
 
-`/fanout` dispatches and samples; it does not own formal code review. For code-review gates, verdicts, or implementation-issue review, use `/critique`, which calls `/fanout -m sample` and owns goals, reviewer cardinality, source verification, scope adjudication, and verdict. Use `/fanout` directly for exploration, diagnosis, design sampling, or caller-owned workflows.
+`/fanout` dispatches and samples; it does not own formal code review. Code-review gates, verdicts, scope adjudication → `/critique` (calls `/fanout -m sample`). Use `/fanout` directly for exploration, diagnosis, design sampling, or caller-owned workflows.
 
 ## Step 1: Infer mode
 
-- Broad research -> split; narrow and hard -> sample
-- Scale dispatch to scope: few files / narrow question -> 3-5 agents; many files / broad surface -> 10+. `sample`: 3 perspectives usually sufficient; 5+ only for high-stakes architectural decisions
+- Broad research → split; narrow/hard → sample.
+- Scale to scope: narrow question → 3-5 agents; broad surface → 10+. `sample`: 3 perspectives default; 5+ only for high-stakes architecture.
 
 ## Step 2: Craft child prompt
 
-- Prompt must be self-contained
-- Common mistakes:
-  - Missing context ("Fix this race") -> include error message + test name
-  - No constraints causing agent to refactor broadly -> add boundaries ("Only modify tests")
-  - Vague output ("Fix it") -> specify deliverable ("Return root cause and change summary")
+Self-contained. Include: error context, scope boundaries, output format. Vague prompts ("fix this race", "fix it") → add error message, test name, deliverable spec.
 
 ## Step 3: Dispatch
 
-Platform-aware dispatch. Choose the correct path based on current platform and worker type.
+Platform-aware dispatch by worker type. Default timeout: 30 minutes per agent (all platforms).
 
-**Claude Code:**
+**Claude Code:** gpt workers → chain-load `/codex-exec`, dispatch as Bash `codex exec` (not Agent tool). Other workers → Agent tool.
 
-- worker type = gpt → chain-load `/codex-exec` via Skill tool first, then dispatch each worker as a Bash `codex exec` command following the `/codex-exec` contract. Do NOT use Agent tool for gpt workers.
-- worker type != gpt → dispatch via Agent tool.
+**Codex CLI:** model `gpt-5.5` reasoning `xhigh` by default.
 
-**Codex CLI:**
-
-- Spawn agents natively with model `gpt-5.5` reasoning `xhigh` (defaults, unless user explicitly overrides model or effort).
-- Use a 30-minute timeout by default.
-
-**Error handling (all platforms):**
-
-- Recoverable errors (rate limit, transient network, launch timeout, spawn error with no semantic result): max 2 retries per agent.
-- Non-recoverable errors: do not silently substitute with local inline work.
+**Errors:** recoverable (rate limit, transient, spawn) → max 2 retries. Non-recoverable → surface; never silently substitute with local inline work.
 
 ## Step 4: Post-processing
 
-Factual outputs must be verified against source code.
+**Full quorum required.** No post-processing, GSA, implementation, or downstream action until every dispatched agent returns (success or non-recoverable failure). Early synthesis skews toward first-returned perspectives and misses dissent. Wait.
 
-- split: each agent returns output separately, no aggregation
-- sample: after all N outputs arrive, run GSA = Generative Self-Aggregation (consensus/divergence, evidence alignment, dedup, discard unsupported conclusions)
-- harness storage: default to compact `fanout-gsa.md`; raw outputs are provenance, kept only when audit needs them.
-- When the user explicitly asks for fanout plus GSA before implementation or durable rule/doc updates, wait for the requested sample quorum and complete GSA before writing. If execution must proceed before quorum, state the deviation and get user approval first.
+Verify factual outputs against source code.
+
+- **split:** return outputs separately, no aggregation.
+- **sample:** run GSA (consensus/divergence, evidence alignment, dedup, discard unsupported).
+- **storage:** compact `fanout-gsa.md`; raw outputs kept only for audit.
+- **partial quorum exception:** only with explicit user approval. State deviation and missing agents before acting.
