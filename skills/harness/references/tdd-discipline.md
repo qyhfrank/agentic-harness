@@ -4,11 +4,7 @@ Load when `task.protocol` is `tdd_required` or `tdd_preferred`, or when writing/
 
 ## Core Rule
 
-Prove the behavior with a failing reproduction before changing production code.
-
-Prefer an automated test. When the codebase or task does not support that yet, use the smallest reproducible script or equivalent failing proof.
-
-If mocking is required, keep the behavior under proof real.
+Prove behavior with a failing reproduction before production changes. Prefer an automated test; otherwise use the smallest reproducible script or equivalent failing proof. If mocking is required, keep the behavior under proof real.
 
 ## Fail-First Cycle
 
@@ -91,13 +87,13 @@ Manual reproduction is useful while investigating. It does not replace keeping a
 
 For `tdd_preferred` rounds that legitimately skip fail-first work, record the skip reason in `Decisions`. The checks below apply when the fail-first overlay is in scope.
 
-Before claiming the round is complete, confirm:
+Before claiming complete, confirm:
 
-1. The intended behavior was first observed as a failing reproduction.
-2. The failing reproduction failed for the expected reason.
-3. The implementation change stayed minimal.
-4. Relevant verification now passes.
+1. Intended behavior first failed as a reproduction.
+2. Failure matched the expected reason.
+3. Implementation stayed minimal.
+4. Relevant verification passes.
 5. No production API exists only for tests.
-6. Mocks and fixtures preserve the behavior under proof.
+6. Mocks and fixtures preserve behavior under proof.
 
-If any answer is no or unclear, fix that first.
+If any answer is no/unclear, fix first.
