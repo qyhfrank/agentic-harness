@@ -16,6 +16,7 @@ initialize -> [propose -> cleanup -> commit -> verify -> evaluate -> investigate
 - active_approach:
 - version:
 - current_objective:
+- task_intent:
 - best_result:
 - last_action:
 
@@ -50,11 +51,12 @@ Mutation:
 
   `best_result` for satisfy: latest `kept|done` round summary. For optimize: summary of event with current `best_value`.
 
-- `Working Memory`: current handoff pointers only; no per-round commit/artifact catalog.
-- `Durable Notes`: constraints, dead ends, code maps, durable decisions only; no round history or artifact/check bodies.
-- `Decisions`: append-only run-time decisions; do not copy artifact-owned finding/check bodies.
-- `Next Steps`: rewrite from current ledger/plan every lifecycle boundary; **generated from ledger after stopped/disposed**.
-- `context.md` uses only sections above unless this file adds one; evidence = path + one-line summary.
+- `Working Memory`: current handoff pointers; no per-round commit/artifact catalog.
+- `task_intent`: compact `planning_context.motivation`, else task description.
+- `Durable Notes`: constraints, dead ends, code maps, durable decisions; no round history or artifact/check bodies.
+- `Decisions`: append-only runtime decisions; no artifact-owned finding/check bodies.
+- `Next Steps`: regenerate from ledger/plan at lifecycle boundaries; after stopped/disposed, ledger-generated.
+- `context.md`: only sections above unless this file adds one; evidence = path + one-line summary.
 
 ### `state.jsonl`
 
@@ -149,16 +151,17 @@ After Baseline passes:
 ### Propose
 
 - Read `plan.yaml`: take `active_milestone_id` and its `active` approach
-- If approach has `steps[]` populated and `current_step < len(steps)`: scope the round to `steps[current_step]`
-- If `steps[]` exhausted (`current_step >= len(steps)`) or empty: scope to the approach `hypothesis`
+- Read intent bundle before scoping: `task.description`, `done_when`, `planning_context.motivation`, active milestone objective/rationale/exit criteria, active approach hypothesis/rationale. Rounds serve root intent, not step mechanics only.
+- If approach has `steps[]` and `current_step < len(steps)`: scope to `steps[current_step]`
+- If `steps[]` exhausted (`current_step >= len(steps)`) or empty: scope to approach `hypothesis`
 - Scan `Durable Notes` for `[dead-end]`, `[constraint]` relevant to this milestone/approach
 - Non-trivial changes: converge on approach first; invoke `/brainstorming` when needed
 - When expanding a step into a round, follow `references/plan.md` step content standards (file mapping, intended change, verification commands, no-placeholder rules)
 - Obey `task.protocol` and `execution_policy` (`dangerous_commands` require human approval; `secret_patterns` never read or staged)
-- When `task.protocol` is `tdd_required` or `tdd_preferred`, or the current round writes tests, fixtures, or mocks, load `references/tdd-discipline.md`
-- When `task.protocol = tdd_required` and the round changes production behavior, run RED before patching and record failing reproduction, proof command, and failure evidence in `Decisions` or manifest
-- When `task.protocol = tdd_preferred`, do the same by default; for pure docs/config/non-behavior rounds, record skip reason in `Decisions` before patch
-- Keep the implementation boundary minimal after RED evidence is recorded
+- Load `references/tdd-discipline.md` when `task.protocol` is `tdd_required|tdd_preferred` or the round writes tests, fixtures, or mocks
+- `tdd_required` + production behavior change: run RED before patching; record failing reproduction, proof command, failure evidence in `Decisions` or manifest
+- `tdd_preferred`: same by default; for pure docs/config/non-behavior rounds, record skip reason in `Decisions` before patch
+- Keep implementation boundary minimal after RED evidence
 - One atomic round at a time; if the description needs "and" to explain, split into multiple rounds
 - Sideband/new objective: classify as dependency, scope expansion, or follow-up. Default new carrier; include here only after user confirms boundary/checks/replan update.
 - **Post-revert guard:** if previous round was `reverted`, proposal must state the single hypothesis and cite failed-round evidence. Without both, investigate first; no patch.
@@ -182,7 +185,7 @@ Execute by `cost` group: `cheap -> medium -> expensive`, in list order within ea
 
 `kind: review` checks dispatch skill calls; write verdict to `verification.gates` (`pass|fail|escalated`). Map `needs_escalation` to `escalated`. `manual_probe` results are evidence notes unless contract makes them acceptance evidence.
 
-Before `/critique` review checks, assemble the capsule from `config.yaml`, `plan.yaml`, and current round evidence: task description, `done_when`, boundary, active milestone objective/exit criteria, relevant `planning_context` non-goals/constraints/decisions, check stage/target/base/scope/goals/focus, current round touched files, and unresolved accepted findings or acceptance map.
+Before `/critique` review checks, assemble the capsule from `config.yaml`, `plan.yaml`, and current round evidence: intent bundle, boundary, relevant `planning_context` non-goals/constraints/decisions, check stage/target/base/scope/goals/focus, current round touched files, unresolved accepted findings/acceptance map.
 
 Run checks exactly as written in `config.yaml`. If a check's command, order, or membership changes, update `config.yaml` before Verify runs.
 
@@ -251,7 +254,7 @@ Update `state.jsonl` and regenerate `context.md`. Write `artifacts/round-{N}/man
 
 Refresh native progress mirror (best effort; failures never affect routing, evaluation, or stop conditions).
 
-Decision-only rounds are allowed when no code/config change is needed and `HEAD` stays unchanged. They still write manifest with `changed_files: []` and whether verification reran or reused prior unchanged commit. Pure source-map/evidence-index updates belong in Durable Notes or next implementation manifest unless they change controller/strategy state, satisfy an exit gate, or user requested an audit point.
+Decision-only rounds are allowed when no code/config change is needed and `HEAD` stays unchanged. They still write manifest with `changed_files: []` and whether verification reran or reused prior unchanged commit. Pure source-map/evidence-index updates belong in Durable Notes or next implementation manifest unless they change controller/strategy state, satisfy an exit gate, or user requests an audit point.
 
 ## Stop Conditions
 

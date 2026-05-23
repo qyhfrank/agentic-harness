@@ -16,6 +16,7 @@ plan_sources:
     summary: "..."
 
 planning_context:
+  motivation: null            # why this task is needed; root problem, user pain, or opportunity
   done_when_hint: null
   non_goals: []
   constraints: []
@@ -35,6 +36,7 @@ milestones:
   - id: M1
     title: "..."
     objective: "..."
+    rationale: "why this milestone is needed for the task motivation"
     exit_criteria: "verifiable condition"
     source_refs: []
     status: pending            # pending|active|done|blocked|dropped
@@ -54,15 +56,13 @@ milestones:
         # revert_streak, last_failure_family: omitted at bootstrap; created on first revert
 ```
 
-Field notes: `version` bumps only on structural replan. `plan_sources[].artifact_path` points to source snapshot or pointer; snapshots are evidence, not control truth. Use `investigation_gsa` for `/fanout`/GSA evidence that seeds a plan. `planning_context` holds intent anchors not derivable from `config.yaml`; contract fields stay in config. `source_refs[]` cite source ids. `exit_criteria` must reference a check, artifact, or observable code-state claim. `score` ranks approaches. `evidence_for/against` hold current decision evidence only: latest pass/fail, active blockers, durable rationale, or artifact path; cap at about 5 one-line entries per approach and replace/merge old chronology. Full round history stays in `state.jsonl` and artifacts. Setup writes populated pending `milestones[]`; empty is legacy/repair fallback only. Status values must use canonical enums; repair may normalize legacy aliases only with ledger/controller evidence (`complete|completed -> done`, `in_progress -> active`, `rejected -> failed|dropped`).
+Field notes: `version` bumps only on structural replan. `plan_sources[].artifact_path` points to source snapshot/pointer; snapshots are evidence, not control truth. `investigation_gsa` seeds plans from `/fanout`/GSA evidence. `planning_context` holds intent anchors not derivable from `config.yaml`; contract fields stay in config. `motivation` = root why, not acceptance criteria. Milestone `rationale` ties each milestone to that motivation. `source_refs[]` cite source ids. `exit_criteria` names a check, artifact, or observable code-state claim. `score` ranks approaches. `evidence_for/against` hold current decision evidence only: latest pass/fail, active blockers, durable rationale, or artifact path; cap about 5 one-line entries per approach and replace/merge old chronology. Full round history stays in `state.jsonl` and artifacts. Setup writes populated pending `milestones[]`; empty only for legacy/repair. Status values must use canonical enums; repair may normalize legacy aliases only with ledger/controller evidence (`complete|completed -> done`, `in_progress -> active`, `rejected -> failed|dropped`).
 
 ### Approach steps
 
-`steps[]` is an optional ordered list of sub-objectives. Each entry is one verifiable sub-goal. When populated, Propose consumes `steps[current_step]` instead of the hypothesis. On `kept`, advance `current_step` if sub-goal is met, or record a one-line reason it remains open. Two kept rounds on the same step require split/advance unless the approach is explicitly hypothesis-level. On `reverted`, retry same step, not same patch. When all steps are consumed, evaluate milestone `exit_criteria`.
+`steps[]` is optional ordered sub-objectives. Each entry is one verifiable sub-goal. When populated, Propose consumes `steps[current_step]` instead of the hypothesis. On `kept`, advance when met or record why open. Two kept rounds on the same step require split/advance unless explicitly hypothesis-level. On `reverted`, retry same step, not same patch. When consumed, evaluate milestone `exit_criteria`; if unmet, fall back to hypothesis-level Propose, then normal adapt if the next round still fails to advance.
 
-Steps are generated during bootstrap/replan. They may be empty for simple approaches. Steps are advisory: Propose may skip or merge when evidence warrants, but must note deviation in `Decisions`.
-
-When `current_step >= len(steps)` but `exit_criteria` is unmet: fall back to hypothesis-level Propose. If next round also fails to advance, normal adapt logic applies.
+Steps are generated during bootstrap/replan, may be empty for simple approaches, and are advisory: Propose may skip/merge when evidence warrants, but must note deviation in `Decisions`.
 
 ### Step content standards
 

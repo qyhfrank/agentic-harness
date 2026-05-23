@@ -23,7 +23,7 @@ External plan import:
 - Accept only explicit `.md`, `.yaml`, or inline plan input; no auto-discovery.
 - Snapshot under `artifacts/setup/`; record path, digest, summary. Duplicate external files may live once in `.harness/shared/` with task-local pointer/symlink.
 - For sectioned sources, record `relevant_sections`; feed only scoped extracts into brainstorming/synthesis; keep full-source digest.
-- Extract goal/done condition, boundary hints, checks, milestones, approaches, non-goals, constraints, assumptions, decisions.
+- Extract goal/done condition, root problem/motivation, boundary hints, checks, milestones/rationales, approaches, non-goals, constraints, assumptions, decisions.
 - External files are snapshots, not live links; later changes require explicit re-import/replan.
 
 **Dispatch preamble:**
@@ -33,12 +33,11 @@ mode: embedded
 task_id: <task_id or provisional task slug>
 caller: /harness setup
 goal: "<raw user goal>"
+motivation: "<why the task is needed, if stated>"
 plan_sources: [<external plan summaries, if any>]
 ```
 
-**Normalize selected source:** snapshot selected plan; record id/digest/summary/sections in `plan.yaml.plan_sources[]`; map goal/done/boundary/protocol/check/milestone fields to config and pending milestones. `planning_context` keeps intent anchors only, not finalized contract fields or unmodified source prose.
-
-All values remain advisory until Step 4 finalizes them. The user confirms or overrides each field during contract finalization.
+**Normalize selected source:** snapshot selected plan; record id/digest/summary/sections in `plan.yaml.plan_sources[]`; map goal/done/boundary/protocol/check/milestone fields to config and pending milestones. `planning_context` stores compact intent anchors incl. task motivation; it excludes finalized contract fields and source prose. If absent motivation would affect boundary, done condition, or milestone order, ask; otherwise set null and do not invent. Values stay advisory until Step 4; user confirms/overrides each field.
 
 ## Step 3: Plan-Guided Codebase Discovery
 
@@ -72,7 +71,7 @@ Each check shape: `{name, kind, action, cost: cheap|medium|expensive, working_di
 - `checks[]` is runtime verification, not done condition. After setup, change command/order/membership in `config.yaml` before Verify.
 - Future probes with unknown target/port/artifact stay in `milestones[].exit_criteria` or steps until executable.
 
-User-requested skill gates such as `/critique` or `$critique` phrased as check/gate/must-pass/before-done/acceptance must be `checks[].action` starting with that skill command; prose/manual notes do not satisfy. If advisory, ask whether it belongs outside checks.
+User-requested skill gates such as `/critique` or `$critique` phrased as check/gate/must-pass/before-done/acceptance must be `checks[].action` starting with that skill; prose/manual notes do not satisfy. If advisory, ask whether it belongs outside checks.
 
 Review checks:
 
@@ -104,17 +103,17 @@ Must finalize:
 
 ## Step 5: Write Task State
 
-Choose the `.harness/` location before creating task state:
+Choose `.harness/` location before state:
 
-- Single-repo task -> confirm a state location that does not create tracked repo surface; prefer repo-adjacent or established local location over new in-worktree state dir
-- Multi-repo or cross-worktree task -> place `.harness/` under the nearest common parent directory of the touched repos/worktrees
-- Do not default to the currently open repo just because setup is being run from there
-- For dependent future work, create only the next executable carrier by default; keep later work as portfolio/lean pending until prerequisites are verifiable.
+- Single-repo task -> confirm a location that does not create tracked repo surface; prefer repo-adjacent or established local over new in-worktree state dir
+- Multi-repo/cross-worktree task -> nearest common parent of touched repos/worktrees
+- Do not default to the current repo just because setup runs there
+- Dependent future work -> create only the next executable carrier by default; keep later work as portfolio/lean pending until prerequisites are verifiable.
 
 ### `setup:new`
 
 1. Confirm the directory containing `.harness/`; create if missing
-2. Generate `task_slug`, allocate `task_id`, ensure unique NNN prefix, then create `.harness/tasks/<task_id>/` and `artifacts/setup/` atomically. Scan sibling tasks for same worktree/branch; reuse requires `continuation_of`, base commit, and parent disposition. On race, pick next unused NNN; existing duplicates require user choice.
+2. Generate `task_slug`, allocate unique NNN `task_id`, create `.harness/tasks/<task_id>/` + `artifacts/setup/` atomically. Scan sibling tasks for same worktree/branch; reuse needs `continuation_of`, base commit, and parent disposition. Race -> next NNN; duplicates -> user choice.
 3. If inside a git repo, prefer `.git/info/exclude` for `.harness/` and `.worktree/`
 4. Write `config.yaml`: `task.id`, `description`, `done_when`, `base_branch`, remaining skeleton fields. Run blockers become checks or blocking `open_questions`, not context-only notes. No placeholders
 5. Write `context.md`: no-events Current State per `references/run.md`; manual sections empty; `last_action: "setup completed; ready for run preflight"`; Next Steps: `Run preflight; on success, record baseline and enter round 1.`

@@ -40,6 +40,17 @@
         "reuses digest-addressed shared setup snapshots for identical external sources",
         "records relevant sections or scoped extracts for long structured plans"
       ]
+    },
+    {
+      "id": 5,
+      "prompt": "Set up/run a multi-milestone harness task from terse goal plus motivation: fix export flow because enterprise users abandon repeated timeout regressions.",
+      "expected_output": "Harness records task why in setup and carries it into Propose rounds and critique capsules.",
+      "expectations": [
+        "planning_context includes motivation, or asks when absent motivation affects scope",
+        "milestones[].rationale links each milestone to task motivation",
+        "Propose reads motivation and milestone rationale before scoping",
+        "critique capsule includes task motivation plus milestone/approach rationale"
+      ]
     }
   ]
 }
