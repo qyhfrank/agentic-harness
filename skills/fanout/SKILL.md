@@ -7,31 +7,33 @@ argument-hint: <task> [-m split|sample] [-a <type>[:<count>]]... [-b]
 Arguments: $ARGUMENTS
 
 - `-m` (default: auto-infer) — `split` (data-parallel, no aggregation) / `sample` (multi-sample, synthesize)
-- `-a` (default: 5 x `auto`) — number = count of inferred worker type; `type` = that type x5; `type:N` = specific. Valid types include `gpt`. `/codex-exec` in the task argument or `-a gpt` both resolve worker type to `gpt`.
+- `-a` (default: 5 x `auto`) — number = count of inferred worker type; `type` = that type x5; `type:N` = specific. `/codex-exec` or `-a gpt` both resolve to gpt type.
 - `-b` (default: off) — background child context
 
 ## Ownership Boundary
 
-`/fanout` dispatches and samples; it does not own formal code review. Code-review gates, verdicts, scope adjudication → `/critique` (calls `/fanout -m sample`). Use `/fanout` directly for exploration, diagnosis, design sampling, or caller-owned workflows.
+`/fanout` dispatches and samples; not formal code review. Review gates/verdicts/scope adjudication: use `/critique` (calls `/fanout -m sample`). `/fanout` directly for exploration, diagnosis, design sampling, or caller-owned workflows.
 
 ## Step 1: Infer mode
 
-- Broad research → split; narrow/hard → sample.
-- Scale to scope: narrow question → 3-5 agents; broad surface → 10+. `sample`: 3 perspectives default; 5+ only for high-stakes architecture.
+- Broad research -> split; narrow/hard -> sample
+- Scale to scope: few files/narrow -> 3-5 agents; broad surface -> 10+. `sample`: 3 usually sufficient; 5+ for high-stakes architecture
 
 ## Step 2: Craft child prompt
 
-Self-contained. Include: error context, scope boundaries, output format. Vague prompts ("fix this race", "fix it") → add error message, test name, deliverable spec.
+- Self-contained prompts required
+- Common mistakes: missing context -> include error + test name; unconstrained scope -> add boundaries; vague output -> specify deliverable
+- `sample` thrives on divergent paths. Provide problem, symptoms, environment context; leave investigation strategy to each worker. Shared hypotheses and pre-assigned file lists collapse diversity into N copies of the same analysis. Ground with facts (config values, errors, paths); avoid steering the approach.
 
 ## Step 3: Dispatch
 
-Platform-aware dispatch by worker type. Default timeout: 30 minutes per agent (all platforms).
+Platform-aware dispatch:
 
-**Claude Code:** gpt workers → chain-load `/codex-exec`, dispatch as Bash `codex exec` (not Agent tool). Other workers → Agent tool.
+**Claude Code:** gpt workers -> chain-load `/codex-exec`, dispatch as `codex exec` Bash commands. Non-gpt -> Agent tool.
 
-**Codex CLI:** model `gpt-5.5` reasoning `xhigh` by default.
+**Codex CLI:** native spawn, `gpt-5.5` `xhigh` defaults, 30-min timeout.
 
-**Errors:** recoverable (rate limit, transient, spawn) → max 2 retries. Non-recoverable → surface; never silently substitute with local inline work.
+**Errors:** recoverable (rate limit, network, timeout) -> max 2 retries. Non-recoverable -> no silent local substitution.
 
 ## Step 4: Post-processing
 
@@ -39,7 +41,6 @@ Platform-aware dispatch by worker type. Default timeout: 30 minutes per agent (a
 
 Verify factual outputs against source code.
 
-- **split:** return outputs separately, no aggregation.
-- **sample:** run GSA (consensus/divergence, evidence alignment, dedup, discard unsupported).
-- **storage:** compact `fanout-gsa.md`; raw outputs kept only for audit.
-- **partial quorum exception:** only with explicit user approval. State deviation and missing agents before acting.
+- split: separate outputs, no aggregation
+- sample: GSA (consensus/divergence, evidence alignment, dedup, discard unsupported conclusions) after quorum
+- Partial quorum exception: only with explicit user approval. State deviation and missing agents before acting.
