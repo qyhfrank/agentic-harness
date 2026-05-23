@@ -3,7 +3,7 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "Rerun critique after a failed milestone review where F-001 remains open and the new diff does not touch F-001 anchors.",
+      "prompt": "Rerun critique after failed milestone review where F-001 remains open and new diff misses F-001 anchors.",
       "expected_output": "Critique carries F-001 forward and scopes fresh reviewer work to the new diff plus unresolved accepted findings.",
       "expectations": [
         "does not redispatch reviewers solely to rediscover unchanged open findings",
@@ -14,7 +14,7 @@
     {
       "id": 2,
       "prompt": "Store a failing harness critique verdict and the next round acceptance map.",
-      "expected_output": "Only the critique artifact owns finding details; the acceptance map is compact and ID-based.",
+      "expected_output": "Only the critique artifact owns finding details; acceptance map is compact and ID-based.",
       "expectations": [
         "acceptance map uses F-id -> classification -> actionability -> chosen_action -> evidence/commit",
         "acceptance map does not restate Finding, Impact, Trigger, and Anchor",

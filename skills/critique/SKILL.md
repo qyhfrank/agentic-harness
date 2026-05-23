@@ -54,9 +54,9 @@ Add when the change touches permissions/trust boundaries, durable state/data wri
 
 #### Goal 5 (optional): Structure, simplification, and maintainability
 Add for large refactors, new abstractions, high coupling, unclear ownership, or hot-path/perf-sensitive code.
-- Prefer the smallest structure preserving clarity, correctness, and testability.
+- Prefer the smallest structure preserving clarity, correctness, testability.
 - Reuse local helpers instead of duplicate or hand-rolled string/path/env/type checks.
-- Prefer fewer helpers, wrappers, branches, return values, aliases, and state; remove unused returns/params, thin wrappers, dead generalization, and structures with no current consumer.
+- Prefer fewer helpers, wrappers, branches, returns, aliases, and state; remove unused returns/params, thin wrappers, dead generalization, and structures with no current consumer.
 - Keep a helper only when it removes real duplication, captures a stable semantic boundary, or creates a materially better test seam.
 - Remove unnecessary work, missed concurrency, hot-path bloat, pre-check-before-operate, missing cleanup, broad reads/loads.
 
@@ -75,7 +75,7 @@ Before dispatch, define target/revision, stage (`milestone|final|ad-hoc`), goal,
 
 For harness tasks, scope reviewers to `boundary.mutable` plus current round touched files. Treat `boundary.immutable`, unrelated dirty files, and workspace drift as out of scope unless included. Include boundary in reviewer prompt.
 
-For harness milestone/final gates, include active task and milestone intent in the capsule: `task.description`, `done_when`, active milestone objective/exit criteria, relevant non-goals/constraints, boundary, base/candidate/diff range, and current round touched files. File scope limits inspection; it does not replace intent or acceptance context.
+For harness milestone/final gates, include active task and milestone intent in the capsule: `task.description`, `done_when`, task motivation, active milestone objective/rationale/exit criteria, active approach hypothesis/rationale, relevant non-goals/constraints, boundary, base/candidate/diff range, and current round touched files. File scope limits inspection; it does not replace intent or acceptance context.
 
 For git branches/worktrees, include base, candidate, diff range. For harness tasks, derive base from task baseline or round base, not current `main`. If base advanced since setup, do not use `main..HEAD` unless explicit. Unknown base => `needs_escalation`; request before dispatch.
 
@@ -85,20 +85,13 @@ For custom goals, state which standard goal they extend/replace. Reruns review d
 
 Gate check: Confirm reviewer agent type = gpt. If not, STOP.
 
-For each selected goal, dispatch 2 independent GPT reviewers with the same prompt:
-
-```bash
-/fanout -m sample -a gpt:2
-```
-
-Total reviewers required: `2 * selected goals`.
-If dispatch is blocked, let `/fanout` retry. Return `needs_escalation` only after retry exhausts with unmet cardinality; no reviewer substitution or inline review.
+Per selected goal, dispatch 2 independent GPT reviewers with the same prompt: `/fanout -m sample -a gpt:2`. Required total = `2 * selected goals`. If blocked, let `/fanout` retry; after retry exhaustion with unmet cardinality, return `needs_escalation`; no substitution/inline review.
 
 ### Prompt for Reviewers
 
 - Agent Context Card, e.g. `Agent: reviewer | depth 1/1 | budget 0 | parent: critique`
 - Reviewer agent type: `gpt`
-- Review target/scope materials: diff, files, plan, or artifact. For git targets, include base revision, candidate revision, diff range.
+- Target/scope materials: diff, files, plan, or artifact. For git targets, include base revision, candidate revision, diff range.
 - Goal name, angle, coverage target, standard.
 - Finding constraints: non-speculative issues with real anchors only; skip stylistic/speculative; avoid scope expansion unless required for a verified issue; deferred surfaces are findings only when artifact claims support or omission creates concrete current risk.
 - Preserve explicit user wording/surfaces. If context gives exact labels, output shape, fields, or "do not use X", do not propose alternates unless required by a verified bug; prefer delete, hide, narrow, reuse.
@@ -143,27 +136,13 @@ Verified findings may still be out of scope. When several reduce to one deferred
 
 GSA is internal state, not a second deliverable. If recorded, keep only one verification/action line per final finding beyond verdict card.
 
-Classification taxonomy:
+Classification -> actionability -> recommendation:
 
-- `spec-required bug`: requirement or compatibility violation.
-- `current production risk`: concrete current runtime, data, security, availability, or user-visible failure.
-- `validation gap`: weak evidence without a proven bug.
-- `cleanup/simplification`: acceptable behavior with excess breadth, duplication, or complexity.
-- `out-of-scope policy/feature`: deferred surface, new policy, or adjacent behavior.
-
-Actionability:
-
-- `required_fix`: `spec-required bug` or concrete `current production risk`.
-- `optional_trim`: cleanup/simplification that deletes, narrows, inlines, or reuses.
-- `evidence_note`: validation gap without a proven current bug.
-- `defer`: out-of-scope, adjacent, or deferred surface.
-
-Recommendation assignment:
-
-- `required_fix`: Should fix yes; Fix now now; How = minimal direct fix.
-- `optional_trim`: Should fix nice-to-have; Fix now now if same-slice deletion/narrowing is small, else next-round; How = minimal trim/reuse.
-- `evidence_note`: Should fix nice-to-have or no; Fix now next-round/backlog; How = smallest proof or record gap.
-- `defer`: Should fix no; Fix now backlog; How = defer/omit.
+- `spec-required bug`: requirement/compatibility violation -> `required_fix` -> Should fix yes; Fix now now; How = minimal direct fix.
+- `current production risk`: concrete current runtime, data, security, availability, or user-visible failure -> `required_fix` -> Should fix yes; Fix now now; How = minimal direct fix.
+- `validation gap`: weak evidence without proven bug -> `evidence_note` -> Should fix nice-to-have/no; Fix now next-round/backlog; How = smallest proof or record gap.
+- `cleanup/simplification`: acceptable behavior with excess breadth, duplication, or complexity -> `optional_trim` -> Should fix nice-to-have; Fix now now if same-slice deletion/narrowing is small, else next-round; How = minimal trim/reuse.
+- `out-of-scope policy/feature`: deferred surface, new policy, or adjacent behavior -> `defer` -> Should fix no; Fix now backlog; How = defer/omit.
 
 For non-required_fix: use existing proof, delete/narrow/inline/reuse, omit/defer/escalate.
 
