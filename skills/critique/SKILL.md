@@ -75,6 +75,8 @@ Before dispatch, define target/revision, stage (`milestone|final|ad-hoc`), goal,
 
 For harness tasks, scope reviewers to `boundary.mutable` plus current round touched files. Treat `boundary.immutable`, unrelated dirty files, and workspace drift as out of scope unless included. Include boundary in reviewer prompt.
 
+For harness milestone/final gates, include active task and milestone intent in the capsule: `task.description`, `done_when`, active milestone objective/exit criteria, relevant non-goals/constraints, boundary, base/candidate/diff range, and current round touched files. File scope limits inspection; it does not replace intent or acceptance context.
+
 For git branches/worktrees, include base, candidate, diff range. For harness tasks, derive base from task baseline or round base, not current `main`. If base advanced since setup, do not use `main..HEAD` unless explicit. Unknown base => `needs_escalation`; request before dispatch.
 
 For custom goals, state which standard goal they extend/replace. Reruns review diff since previous critique plus unresolved accepted findings; carry known-open IDs unless anchors changed. Consecutive harness reruns may reference the prior capsule when scope is unchanged; inline only current changed files, diff range, unresolved findings. Reopen full goals only for final release, scope changes, or new cross-cutting risk.

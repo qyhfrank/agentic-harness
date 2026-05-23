@@ -182,6 +182,8 @@ Execute by `cost` group: `cheap -> medium -> expensive`, in list order within ea
 
 `kind: review` checks dispatch skill calls; write verdict to `verification.gates` (`pass|fail|escalated`). Map `needs_escalation` to `escalated`. `manual_probe` results are evidence notes unless contract makes them acceptance evidence.
 
+Before `/critique` review checks, assemble the capsule from `config.yaml`, `plan.yaml`, and current round evidence: task description, `done_when`, boundary, active milestone objective/exit criteria, relevant `planning_context` non-goals/constraints/decisions, check stage/target/base/scope/goals/focus, current round touched files, and unresolved accepted findings or acceptance map.
+
 Run checks exactly as written in `config.yaml`. If a check's command, order, or membership changes, update `config.yaml` before Verify runs.
 
 Evidence: stdout/stderr + `artifacts/round-{N}/manifest.json`. Manifest verification lists only executed checks; each `command` matches configured `action`; each gate key equals `checks[].name`. Gate passes only from configured action on current commit, or same-commit manifest with same action and unchanged target/scope. Ad hoc/manual checks are evidence notes. Omit short-circuited checks. Any other skip needs recorded reason or escalates as contract drift.
