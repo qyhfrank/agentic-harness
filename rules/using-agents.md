@@ -34,6 +34,7 @@ Default child-agent timeout is 30 minutes.
 3. **Budget is hard.** Every new agent context (incl. retries) consumes `child_budget`. Child may tighten but never expand inherited budget.
 4. **No cycles.** Never invoke an orchestrator or runner already in call stack.
 5. **Child prompts must be self-contained.** Include scope, goal, constraints, expected output format. No implied context.
+   Match specificity to execution shape: sampling preserves approach choice; split, doer, and review prompts may constrain scope, steps, or hypotheses.
 6. **Background delegation is read-only or advisory by default.** Concurrent code edits require partitioned file/resource ownership per child before dispatch; execution surface must support safe writes.
 7. **Parent owns verification.** Subagent findings are hypotheses until parent verifies against source, code, or tool output.
 8. **No silent substitution.** If child dispatch fails or execution shape changes, state it explicitly. Never fallback to local inline work automatically without users' approval.

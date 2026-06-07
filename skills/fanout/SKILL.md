@@ -22,8 +22,12 @@ Arguments: $ARGUMENTS
 ## Step 2: Craft child prompt
 
 - Self-contained prompts required
-- Common mistakes: missing context -> include error + test name; unconstrained scope -> add boundaries; vague output -> specify deliverable
-- `sample` thrives on divergent paths. Provide problem, symptoms, environment context; leave investigation strategy to each worker. Shared hypotheses and pre-assigned file lists collapse diversity into N copies of the same analysis. Ground with facts (config values, errors, paths); avoid steering the approach.
+- Common fixes: add missing context; bound scope; specify deliverable
+- Match prompt shape to mode:
+  - `sample`: same problem, independent stochastic exploration. Define problem space, not solution paths. Provide background/current state, goal, hard facts/constraints, non-goals, scoring criteria, and output shape. Do not prescribe topology, steps, preferred hypotheses, file lists, or sequence unless the user made them hard constraints.
+  - `split`: known decomposition. Assigned files, tasks, claims, or data slices are appropriate.
+  - verification/review: anchor on the specific claim, diff, artifact, and acceptance criteria.
+- Before dispatching `sample`, demote solution-shaped phrasing to questions or hypotheses. Bound exploration with facts and criteria, not preferred architecture.
 
 ## Step 3: Dispatch
 
@@ -42,5 +46,5 @@ Platform-aware dispatch:
 Verify factual outputs against source code.
 
 - split: separate outputs, no aggregation
-- sample: GSA (consensus/divergence, evidence alignment, dedup, discard unsupported conclusions) after quorum
+- sample: after quorum, GSA consensus/divergence, evidence alignment, dedup, and unsupported conclusions. Check whether consensus is evidence-backed or prompt-anchored; if shared assumptions collapsed diversity, state it and resample when option discovery matters.
 - Partial quorum exception: only with explicit user approval. State deviation and missing agents before acting.
