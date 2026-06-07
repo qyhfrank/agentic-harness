@@ -1,50 +1,45 @@
 ---
 name: fanout
-description: 'Use when independent subtasks can be split across agents, or when the same question benefits from several independent perspectives (/fanout, fan out, parallel agents, split this across agents, get multiple opinions, or "sample N agents"). Review gates: use /critique (calls /fanout). Worktree/PR batch changes: use /batch.'
-argument-hint: <task> [-m split|sample] [-a <type>[:<count>]]... [-b]
+description: 'Use when independent subtasks split across agents, or one question needs several independent perspectives (/fanout, fan out, parallel agents, split across agents, get multiple opinions, "sample N agents"). Review gates: /critique (calls /fanout). Worktree/PR batch changes: /batch.'
+argument-hint: <task> [-m split|sample] [-a <type>[:<count>]]... [--fg]
 ---
 
 Arguments: $ARGUMENTS
 
 - `-m` (default: auto-infer) — `split` (data-parallel, no aggregation) / `sample` (multi-sample, synthesize)
-- `-a` (default: 5 x `auto`) — number = count of inferred worker type; `type` = that type x5; `type:N` = specific. `/codex-exec` or `-a gpt` both resolve to gpt type.
-- `-b` (default: off) — background child context
+- `-a` (default: `auto`x5) — `N` = N inferred workers; `type` = that type x5; `type:N` = exact. `/codex-exec` or `-a gpt` resolve to gpt.
+- `-b` (default: on) — dispatch all workers to background, then block on quorum. `--fg` forces foreground (also when the platform lacks background child support).
 
 ## Ownership Boundary
 
-`/fanout` dispatches and samples; not formal code review. Review gates/verdicts/scope adjudication: use `/critique` (calls `/fanout -m sample`). `/fanout` directly for exploration, diagnosis, design sampling, or caller-owned workflows.
+`/fanout` dispatches and samples; not formal code review. Review gates/verdicts/scope adjudication: `/critique` (calls `/fanout -m sample`). Use `/fanout` directly for exploration, diagnosis, design sampling, or caller-owned workflows.
 
 ## Step 1: Infer mode
 
 - Broad research -> split; narrow/hard -> sample
-- Scale to scope: few files/narrow -> 3-5 agents; broad surface -> 10+. `sample`: 3 usually sufficient; 5+ for high-stakes architecture
+- Scale to scope: narrow -> 3-5 agents; broad -> 10+. `sample`: 3 usually enough; 5+ for high-stakes architecture
 
 ## Step 2: Craft child prompt
 
-- Self-contained prompts required
-- Common fixes: add missing context; bound scope; specify deliverable
-- Match prompt shape to mode:
-  - `sample`: same problem, independent stochastic exploration. Define problem space, not solution paths. Provide background/current state, goal, hard facts/constraints, non-goals, scoring criteria, and output shape. Do not prescribe topology, steps, preferred hypotheses, file lists, or sequence unless the user made them hard constraints.
-  - `split`: known decomposition. Assigned files, tasks, claims, or data slices are appropriate.
-  - verification/review: anchor on the specific claim, diff, artifact, and acceptance criteria.
-- Before dispatching `sample`, demote solution-shaped phrasing to questions or hypotheses. Bound exploration with facts and criteria, not preferred architecture.
+- Self-contained prompts required. Common fixes: add context, bound scope, specify deliverable.
+- Long/repeated prompts may use a prompt artifact when workers share filesystem access: full prompt in temp/project scratch; child message carries path, read contract, output contract. Keep until quorum; no secrets. Inline if file access is uncertain.
+- Match shape to mode:
+  - `sample`: same problem, independent stochastic exploration. Define the problem space, not solution paths: background/current state, goal, hard facts/constraints, non-goals, scoring criteria, output shape. Don't prescribe topology, steps, preferred hypotheses, file lists, or sequence unless the user made them hard constraints. Demote solution-shaped phrasing to questions/hypotheses first.
+  - `split`: known decomposition. Assigned files, tasks, claims, or data slices.
+  - verification/review: anchor on the specific claim, diff, artifact, acceptance criteria.
 
 ## Step 3: Dispatch
 
-Platform-aware dispatch:
+Background by default (see `-b`); foreground platforms (e.g. OpenCode write paths) dispatch one wave.
 
-**Claude Code:** gpt workers -> chain-load `/codex-exec`, dispatch as `codex exec` Bash commands. Non-gpt -> Agent tool.
-
-**Codex CLI:** native spawn, `gpt-5.5` `xhigh` defaults, 30-min timeout.
-
-**Errors:** recoverable (rate limit, network, timeout) -> max 2 retries. Non-recoverable -> no silent local substitution.
+- **Claude Code:** gpt workers -> chain-load `/codex-exec`, dispatch as `codex exec` Bash commands. Non-gpt -> Agent tool.
+- **Codex CLI:** native spawn, `gpt-5.5` `xhigh`, 30-min timeout.
+- **Errors:** recoverable (rate limit, network, timeout) -> max 2 retries. Non-recoverable -> no silent local substitution.
 
 ## Step 4: Post-processing
 
-**Full quorum required.** No post-processing, GSA, implementation, or downstream action until every dispatched agent returns (success or non-recoverable failure). Early synthesis skews toward first-returned perspectives and misses dissent. Wait.
+**Full quorum required.** While workers run, the main agent only waits — no own investigation, partial GSA, verification, implementation, or downstream action until every agent returns (success or non-recoverable failure). Early work skews synthesis toward first returners, misses dissent, and contaminates a role that must stay neutral. Verify factual outputs against source.
 
-Verify factual outputs against source code.
-
-- split: separate outputs, no aggregation
-- sample: after quorum, GSA consensus/divergence, evidence alignment, dedup, and unsupported conclusions. Check whether consensus is evidence-backed or prompt-anchored; if shared assumptions collapsed diversity, state it and resample when option discovery matters.
-- Partial quorum exception: only with explicit user approval. State deviation and missing agents before acting.
+- split: separate outputs, no aggregation.
+- sample: after quorum, GSA for consensus/divergence, evidence alignment, dedup, unsupported conclusions. Check whether consensus is evidence-backed or prompt-anchored; if shared assumptions collapsed diversity, say so and resample when option discovery matters.
+- Partial quorum: only with explicit user approval. State deviation and missing agents first.
