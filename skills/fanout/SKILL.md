@@ -1,6 +1,6 @@
 ---
 name: fanout
-description: 'Use when independent subtasks split across agents, or one question needs several independent perspectives (/fanout, fan out, parallel agents, split across agents, get multiple opinions, "sample N agents"). Review gates: /critique (calls /fanout). Worktree/PR batch changes: /batch.'
+description: 'Independent subtasks split across agents, or one question needing multiple perspectives (parallel agents, sample N agents, get multiple opinions). Review gates: /audit. Batch changes: /batch.'
 argument-hint: <task> [-m split|sample] [-a <type>[:<count>]]... [--fg]
 ---
 
@@ -12,7 +12,7 @@ Arguments: $ARGUMENTS
 
 ## Ownership Boundary
 
-`/fanout` dispatches and samples; not formal code review. Review gates/verdicts/scope adjudication: `/critique` (calls `/fanout -m sample`). Use `/fanout` directly for exploration, diagnosis, design sampling, or caller-owned workflows.
+`/fanout` dispatches and samples; not formal code review. Review gates/verdicts/scope adjudication: `/audit` (calls `/fanout -m sample`). Use `/fanout` directly for exploration, diagnosis, design sampling, or caller-owned workflows.
 
 ## Step 1: Infer mode
 

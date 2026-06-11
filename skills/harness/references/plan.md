@@ -110,7 +110,7 @@ Only one approach per milestone has `status: active`. On failure, promote highes
 | Round outcome | Condition | Score delta | Approach decision |
 |---|---|---|---|
 | `kept` | milestone not done | 0 | `continue` |
-| `kept` | exit_criteria met | 0 | `complete` -> advance milestone |
+| `kept` | exit_criteria met and applicable `milestone_exit` checks passed | 0 | `complete` -> advance milestone |
 | `done` | final task objective met | 0 | `task_done` -> strategy.status=done, all active milestones/approaches → done |
 | `escalated` | any | 0 | `blocked` -> stop |
 
@@ -144,7 +144,7 @@ The `adapt` step runs after Evaluate, before Record. It translates round verdict
 
 **If kept:**
 3. If approach has `steps[]`: advance `current_step` when sub-goal is met
-4. Determine `approach_decision`: `continue|complete|task_done`
+4. Determine `approach_decision`: `continue|complete|task_done`; `complete` requires active milestone exit criteria plus applicable `milestone_exit` checks on the current commit
 5. If `complete`: mark milestone done, activate next pending milestone, set `controller.next_milestone_id`
 
 **If done:**

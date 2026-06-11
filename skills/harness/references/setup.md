@@ -60,30 +60,38 @@ Finalize in this order:
 
 ### Checks contract
 
-Each check shape: `{name, kind, action, cost: cheap|medium|expensive, working_directory?}`.
+Each check shape: `{name, kind, action, cost: cheap|medium|expensive, when?, working_directory?}`.
 
 - `name`: unique identifier for the check, referenced by `verification.gates` and `metric.sample_check`
-- `kind`: `command` for shell commands, `review` only for verdict gates such as `/critique`, `manual_probe` for probes or non-verdict skill calls
+- `kind`: `command` for shell commands, `review` only for verdict gates such as `/audit`, `manual_probe` for probes or non-verdict skill calls
 - `action`: executable shell command or review skill invocation starting with `/`; no conditional prose
 - `cost`: determines execution order (`cheap -> medium -> expensive`)
+- `when`: `preflight|every_round|milestone_exit|final_exit`; default `every_round` for command/manual checks; review checks must set it or derive it from `stage`
 - `working_directory`: optional cwd override; default implementation worktree root
 - `checks[]` must contain at least 1 check before setup completes
 - `checks[]` is runtime verification, not done condition. After setup, change command/order/membership in `config.yaml` before Verify.
 - Future probes with unknown target/port/artifact stay in `milestones[].exit_criteria` or steps until executable.
 
-User-requested skill gates such as `/critique` or `$critique` phrased as check/gate/must-pass/before-done/acceptance must be `checks[].action` starting with that skill; prose/manual notes do not satisfy. If advisory, ask whether it belongs outside checks.
+User-requested skill gates such as `/audit` or `$audit` phrased as check/gate/must-pass/before-done/acceptance must be `checks[].action` starting with that skill; prose/manual notes do not satisfy. If advisory, ask whether it belongs outside checks.
+
+Default review gates:
+
+- Non-very-simple tasks get a final `/audit` check by default: `kind: review`, `stage: final`, `when: final_exit`, usually `cost: expensive`.
+- Add milestone `/audit` checks by default when the task has multiple milestones, changes 3+ files, crosses modules/interfaces, touches API/schema/protocol, user-visible workflow, durable state/data writes, permissions/trust boundaries, concurrency, retry, rollback, or idempotency.
+- Very-simple mechanical tasks may omit audit when deterministic checks cover the whole change; record the narrow omission reason in setup decisions.
+- `/audit` supplements deterministic checks. Do not replace build, test, lint, smoke, metric, or repro commands with review gates.
 
 Review checks:
 
-- `action` should be `/critique` plus concise selectors. Reviewer model/count and fanout mechanics belong to `/critique`.
-- Optional fields: `stage: milestone|final|ad-hoc`, `target`, `base`, `scope`, `goals`, `focus`. Prefer fields over long `action` prose.
-- Review gates use `/critique`, not raw `/fanout`. Bare `action: "/critique"` without stage/target/base/scope/goals blocks setup.
+- `action` should be `/audit` plus concise selectors. Reviewer model/count and fanout mechanics belong to `/audit`.
+- Optional fields: `stage: milestone|final|ad-hoc`, `target`, `base`, `scope`, `goals`, `focus`, `when`. Prefer fields over long `action` prose.
+- Review gates use `/audit`, not raw `/fanout`. Bare `action: "/audit"` without stage/target/base/scope/goals/when blocks setup.
 
 Manual probes are evidence notes unless the contract names probe, checklist, transcript path, commit SHA, and why no deterministic command covers it.
 
 Filtered/no-match proof gates must show intended-surface discovery and distinguish no matches from command errors. For `go test -run`, include `go test -list` or equivalent.
 
-When deterministic checks cannot cover semantic behavior, design intent, or cross-cutting risk, suggest `/critique` as a check. It runs during Verify; place before expensive checks when useful.
+When deterministic checks cannot cover semantic behavior, design intent, or cross-cutting risk, suggest `/audit` as a check. It runs during Verify; place before expensive checks when useful.
 
 ### Optimize contract
 
@@ -124,7 +132,7 @@ Choose `.harness/` location before state:
 
 Reuse existing `task_id` and task directory. Do not delete existing files or artifacts.
 
-- `config.yaml`: fill gaps, infer check `kind` (`/critique` -> `review`; other slash probes -> `manual_probe`; else `command`), normalize cost aliases, move strategy prose to `plan.yaml`, no placeholders
+- `config.yaml`: fill gaps, infer check `kind` (`/audit` -> `review`; other slash probes -> `manual_probe`; else `command`), infer missing `when` from review `stage` or default command/manual checks to `every_round`, normalize cost aliases, move strategy prose to `plan.yaml`, no placeholders
 - `plan.yaml`: missing+events -> build single-milestone active plan from task goal/current code, emit `strategy_updated(reason=bootstrap, trigger=legacy_migration)`, then run; missing/empty+no events -> pending seed from plan sources/setup synthesis; unstarted missing provenance -> `setup_synthesis` or explicit re-import; started missing provenance -> append `legacy_repair` source, not reconstructed setup evidence; normalize status aliases only with ledger/controller evidence; version drift -> restore active pointers from latest controller/strategy events, then immediate replan on run; unrecoverable corruption -> escalate
 - `context.md`: no run events -> reset to `setup:new` initial snapshot; has run events -> fill in missing fields only, do not reset
 - `state.jsonl`: create as empty file only if missing; leave existing history append-only. Legacy invalid events (`type` instead of `event`, non-canonical result/gate values, terminal aliases such as `task_completed` or `release_completed`) are read-only migration evidence, not canonical resume state.
@@ -147,7 +155,7 @@ task: { id: "<task_id>", description: "<goal from user>", done_when: "<observabl
 
 boundary: { mutable: [], immutable: [] }  # implementation files only; generated/cache/profile dirs (`dist/`, `node_modules/`, coverage, `.playwright-cli/profiles/`, `.worktree/`, `.harness/`) are excluded unless the user explicitly makes them the target
 
-checks: []  # {name, kind, action, cost: cheap|medium|expensive, working_directory?}; execution order cheap -> medium -> expensive
+checks: []  # {name, kind, action, cost: cheap|medium|expensive, when?, working_directory?}; execution order cheap -> medium -> expensive
 
 evaluation:
   objective: satisfy          # satisfy|optimize

@@ -87,7 +87,7 @@ Invariants:
 - `strategy_updated` may follow `round_completed` or `baseline_recorded` for non-linear transitions; `version` strictly increments on replan
 - `trigger` is freetext; recommended values: `initial`, `replan`, `new_constraint`. Routing uses structured fields, not trigger text
 - final task completion is `evaluation.result: done` with `controller.approach_decision: task_done`; never `kept + strategy_signal: done`
-- `verification.gates` keys match `checks[].name`; values only `pass|fail|escalated`. Semantics like `fails_closed`/`no_matches` live in manifest.
+- `verification.gates` keys are configured `checks[].name` values for checks executed this event; values only `pass|fail|escalated`. Non-applicable or short-circuited checks live in the manifest, not gates. Semantics like `fails_closed`/`no_matches` live in manifest.
 - New writes use schema events/enums, full SHAs or `null`, and `disposition: merged|kept|discarded`. Unknown events, short commits, structural aliases, missing pre-dispose stop, and `reason: reopen` are migration evidence.
 
 ### `plan.yaml`
@@ -121,7 +121,7 @@ Locate `.harness/` and target task, read task state, classify route:
 - Worktree: create if missing (`.worktree/<task_slug>/`, branch = `<task_slug>`); reuse sibling worktree/branch only with continuation evidence, else unique slug. Path anomaly -> escalate
 - stale `index.lock` -> delete
 - scope: `boundary.immutable` paths must exist, missing -> escalate
-- run configured checks from configured cwd; record cwd, repo root, HEAD in manifest. Dependency installs/build bootstrap are setup/preflight evidence, not acceptance evidence; restore lockfile/generated churn unless in `boundary.mutable`. Negative scans fail closed on command errors. Failure -> fix/rerun; unfixable -> update `context.md` (`last_action`, `Next Steps`) then escalate
+- run configured checks whose `when` is `preflight` or `every_round` from configured cwd; record cwd, repo root, HEAD in manifest. Dependency installs/build bootstrap are setup/preflight evidence, not acceptance evidence; restore lockfile/generated churn unless in `boundary.mutable`. Negative scans fail closed on command errors. Failure -> fix/rerun; unfixable -> update `context.md` (`last_action`, `Next Steps`) then escalate
 
 ### Baseline (fresh + recovery)
 
@@ -165,7 +165,7 @@ After Baseline passes:
 - One atomic round at a time; if the description needs "and" to explain, split into multiple rounds
 - Sideband/new objective: classify as dependency, scope expansion, or follow-up. Default new carrier; include here only after user confirms boundary/checks/replan update.
 - **Post-revert guard:** if previous round was `reverted`, proposal must state the single hypothesis and cite failed-round evidence. Without both, investigate first; no patch.
-- **Reviewer-driven fix guard:** Treat `/critique`, `/fanout`, and reviewer fixes as advisory. Before patching accepted/gate-relevant findings, record compact acceptance map: `F-001 -> classification -> actionability -> chosen_action`. Auto-implement only `required_fix`; apply `optional_trim` only for delete/narrow/inline/reuse. `evidence_note` and `defer` cannot expand implementation or create code/test/schema/UI surfaces. Near-blocking blocks `done` only when verdict is `needs_escalation`, exit criteria/checks require it, or source verification promotes it to current production risk.
+- **Reviewer-driven fix guard:** Treat `/audit`, `/fanout`, and reviewer fixes as advisory. Before patching accepted/gate-relevant findings, record compact acceptance map: `F-001 -> classification -> actionability -> chosen_action`. Auto-implement only `required_fix`; apply `optional_trim` only for delete/narrow/inline/reuse. `evidence_note` and `defer` cannot expand implementation or create code/test/schema/UI surfaces. Near-blocking blocks `done` only when verdict is `needs_escalation`, exit criteria/checks require it, or source verification promotes it to current production risk.
 
 ### Cleanup
 
@@ -181,17 +181,24 @@ After Baseline passes:
 
 ### Verify
 
-Execute by `cost` group: `cheap -> medium -> expensive`, in list order within each group. Any check fail short-circuits the current group and all higher-cost groups.
+Select applicable checks before execution:
+
+- `every_round`: run every Verify.
+- `milestone_exit`: run when the active milestone exit criteria appears satisfied by the current commit, before marking the milestone complete.
+- `final_exit`: run when the task objective and active milestone exit criteria appear satisfied and no pending non-dropped milestone remains, before `done`.
+- `preflight`: run only during Preflight; duplicate the check with a second name if it must also run during Verify.
+
+Execute applicable checks by `cost` group: `cheap -> medium -> expensive`, in list order within each group. Any check fail short-circuits the current group and all higher-cost groups.
 
 `kind: review` checks dispatch skill calls; write verdict to `verification.gates` (`pass|fail|escalated`). Map `needs_escalation` to `escalated`. `manual_probe` results are evidence notes unless contract makes them acceptance evidence.
 
-Before `/critique` review checks, assemble the capsule from `config.yaml`, `plan.yaml`, and current round evidence: intent bundle, boundary, relevant `planning_context` non-goals/constraints/decisions, check stage/target/base/scope/goals/focus, current round touched files, unresolved accepted findings/acceptance map.
+Before `/audit` review checks, assemble the capsule from `config.yaml`, `plan.yaml`, and current round evidence: intent bundle, boundary, relevant `planning_context` non-goals/constraints/decisions, check stage/target/base/scope/goals/focus, current round touched files, unresolved accepted findings/acceptance map.
 
-Run checks exactly as written in `config.yaml`. If a check's command, order, or membership changes, update `config.yaml` before Verify runs.
+Run applicable checks exactly as written in `config.yaml`. If a check's command, order, membership, or `when` changes, update `config.yaml` before Verify runs.
 
-Evidence: stdout/stderr + `artifacts/round-{N}/manifest.json`. Manifest verification lists only executed checks; each `command` matches configured `action`; each gate key equals `checks[].name`. Gate passes only from configured action on current commit, or same-commit manifest with same action and unchanged target/scope. Ad hoc/manual checks are evidence notes. Omit short-circuited checks. Any other skip needs recorded reason or escalates as contract drift.
+Evidence: stdout/stderr + `artifacts/round-{N}/manifest.json`. Manifest verification lists executed checks and non-applicable conditional checks with reason. Each `command` matches configured `action`; each gate key equals an executed `checks[].name`. Gate passes only from configured action on current commit, or same-commit manifest with same action and unchanged target/scope/when. Ad hoc/manual checks are evidence notes. Omit short-circuited checks from gates. Any other skip needs recorded reason or escalates as contract drift.
 
-Artifact hygiene: compact by default. Exclude binaries, DB snapshots, `node_modules`, `dist`, `__pycache__`, browser profiles, repeated screenshots/logs unless offline repro needs them. Store command/path/hash/size and compact logs; raw heavy artifacts only latest pass/latest failure with reason. Prefer incremental critique diffs, DOM/JSON UI proof, screenshot caps/contact sheets, one compact GSA artifact. `evidence.md` only for RED proof, source review, manual-probe transcript, critique acceptance maps; no manifest check copy.
+Artifact hygiene: compact by default. Exclude binaries, DB snapshots, `node_modules`, `dist`, `__pycache__`, browser profiles, repeated screenshots/logs unless offline repro needs them. Store command/path/hash/size and compact logs; raw heavy artifacts only latest pass/latest failure with reason. Prefer incremental audit diffs, DOM/JSON UI proof, screenshot caps/contact sheets, one compact GSA artifact. `evidence.md` only for RED proof, source review, manual-probe transcript, audit acceptance maps; no manifest check copy.
 
 ### Evaluate
 
@@ -200,7 +207,7 @@ First match wins:
 1. Any failure (check fail / crash / hook blocked / timeout) -> `reverted` (failed review gates with actionable findings are failures, not `strategy_updated(reason=reopen)`)
 2. verification escalated -> `escalated`, pause for human
 3. `optimize` and `metric.delta` is non-null and < `min_delta` -> `reverted` (reason: `below_threshold`)
-4. objective met -> `done` only when the task objective and active milestone `exit_criteria` are satisfied and required checks pass (checks passing alone -> `kept`; optimize also needs target reached)
+4. objective met -> `done` only when the task objective and active milestone `exit_criteria` are satisfied, no pending non-dropped milestone remains, and required `every_round|milestone_exit|final_exit` checks pass on the current commit (checks passing alone -> `kept`; optimize also needs target reached)
 5. otherwise -> `kept`
 
 **Revert post-actions (only when reverted):**
@@ -275,11 +282,11 @@ When a stop condition fires:
 2. Regenerate `context.md` Current State from ledger (phase: stopped); rewrite `Next Steps` to disposition prompt
 3. Present disposition (see Disposition)
 
-Before `reason: done`, assert objective met, `controller.next_milestone_id == null`, and no pending non-dropped milestone remains. Defer suffix work by replan/drop/supersede or escalated stop; disposed tasks carry no hidden future work.
+Before `reason: done`, assert objective met, `controller.next_milestone_id == null`, no pending non-dropped milestone remains, and all applicable `final_exit` gates passed on the current commit. Defer suffix work by replan/drop/supersede or escalated stop; disposed tasks carry no hidden future work.
 
 ### Doom loop (tactics-level)
 
-Same check fails with same error pattern N times (`doom_loop_threshold`) within the current milestone. Repeated critique failures by finding family count:
+Same check fails with same error pattern N times (`doom_loop_threshold`) within the current milestone. Repeated audit failures by finding family count:
 
 1. Record pattern in `Durable Notes` (`[dead-end][M#/A#]`)
 2. `/fanout -a gpt:6 -m sample` for independent diagnosis with GSA synthesis (in Claude Code, load `/codex-exec` first)

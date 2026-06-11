@@ -1,6 +1,6 @@
 ---
 name: receiving-code-review
-description: 收到代码修改建议（PR review、口头反馈、消息等外部来源）后，在实施之前使用。不用于 agentic 生成的审查（`/critique`、`/fanout` review、或任何自派遣的审查者输出），这些工作流内部自行验证和裁决。
+description: 收到代码修改建议（PR review、口头反馈、消息等外部来源）后，在实施之前使用。不用于 agentic 生成的审查（`/audit`、`/fanout` review、或任何自派遣的审查者输出），这些工作流内部自行验证和裁决。
 ---
 
 # 代码审查接收
@@ -13,7 +13,7 @@ description: 收到代码修改建议（PR review、口头反馈、消息等外�
 
 本技能仅用于**人工提供或外部作者编写**的审查反馈。
 
-Agentic 审查工作流（`/critique`、`/fanout` review dispatch、或任何自派遣的审查者输出）拥有自己的验证和裁决流程。不要将它们的发现路由到本技能；这样做会增加一个冗余验证层，与审查工作流自身的 GSA 和源码验证步骤冲突。
+Agentic 审查工作流（`/audit`、`/fanout` review dispatch、或任何自派遣的审查者输出）拥有自己的验证和裁决流程。不要将它们的发现路由到本技能；这样做会增加一个冗余验证层，与审查工作流自身的 GSA 和源码验证步骤冲突。
 
 ## 响应流程
 

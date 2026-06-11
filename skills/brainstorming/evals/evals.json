@@ -3,11 +3,11 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "Run brainstorming in embedded mode for /harness setup and suggest a milestone critique gate.",
+      "prompt": "Run brainstorming in embedded mode for /harness setup and suggest a milestone audit gate.",
       "expected_output": "Embedded YAML check_hints include a check kind or leave it inferable by harness setup.",
       "expectations": [
         "check_hints entries include kind when known",
-        "review gates are represented as kind: review with action starting /critique",
+        "review gates are represented as kind: review with action starting /audit",
         "the caller can map check_hints directly into canonical harness checks"
       ]
     }

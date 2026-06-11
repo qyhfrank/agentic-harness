@@ -3,11 +3,12 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "Set up a harness task where every milestone must pass $critique before it is marked done.",
+      "prompt": "Set up a harness task where every milestone must pass $audit before it is marked done.",
       "expected_output": "The harness config writes an executable review check, not prose or raw fanout.",
       "expectations": [
         "checks[] includes kind: review",
-        "checks[].action starts with /critique",
+        "checks[].action starts with /audit",
+        "the review gate is conditional on milestone_exit or equivalent",
         "reviewer count and fanout mechanics are not encoded in harness config prose"
       ]
     },
@@ -44,12 +45,33 @@
     {
       "id": 5,
       "prompt": "Set up/run a multi-milestone harness task from terse goal plus motivation: fix export flow because enterprise users abandon repeated timeout regressions.",
-      "expected_output": "Harness records task why in setup and carries it into Propose rounds and critique capsules.",
+      "expected_output": "Harness records task why in setup and carries it into Propose rounds and audit capsules.",
       "expectations": [
         "planning_context includes motivation, or asks when absent motivation affects scope",
         "milestones[].rationale links each milestone to task motivation",
         "Propose reads motivation and milestone rationale before scoping",
-        "critique capsule includes task motivation plus milestone/approach rationale"
+        "audit capsule includes task motivation plus milestone/approach rationale"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Set up a harness task for a non-very-simple backend change: update the export flow across API handler, queue worker, and retry state so timeout regressions stop. The user does not mention audit.",
+      "expected_output": "Harness proposes deterministic checks plus an executable final audit review gate by default, avoiding risk circularity.",
+      "expectations": [
+        "checks[] includes a kind: review gate with action starting /audit",
+        "the audit gate has stage or selector equivalent to final",
+        "the audit gate is conditional on final_exit or equivalent, not every round by default",
+        "deterministic command checks remain present and are not replaced by audit"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "Set up a harness task to fix one misspelled label in a single README line, with an obvious grep check.",
+      "expected_output": "Harness may omit audit for a very-simple mechanical task and records the narrow reason.",
+      "expectations": [
+        "does not require a default audit gate for the mechanical single-file task",
+        "checks[] still contains at least one deterministic command or equivalent verification",
+        "the omission reason is narrow: very-simple, mechanical, covered by deterministic check"
       ]
     }
   ]

@@ -5,7 +5,7 @@ description: "You MUST use this before any creative work - creating features, bu
 
 # Brainstorming Ideas Into Designs
 
-Help turn ideas into fully formed designs and specs through natural collaborative dialogue.
+Turn ideas into fully formed designs and specs through collaborative dialogue.
 
 <HARD-GATE>
 Do NOT invoke any implementation skill, write any code, scaffold any project, or take any implementation action until you have presented a design and the user has approved it.
@@ -17,40 +17,40 @@ Trivial exemption: single file, clear target, < 3 steps, and mechanical — stat
 You MUST create a task for each of these items and complete them in order:
 
 1. **Explore project context** — check files, docs, recent commits
-2. **Offer visual companion** (if topic will involve visual questions) — this is its own message, not combined with a clarifying question. See the Visual Companion section below.
+2. **Offer visual companion** (if topic will involve visual questions) — its own message, not combined with a clarifying question. See the Visual Companion section below.
 3. **Ask clarifying questions** — batch independent questions, each with a recommended default; understand purpose/constraints/success criteria
 4. **Propose 2-3 approaches** — with trade-offs and your recommendation
 5. **Present design** — in sections scaled to their complexity, get user approval after each section
 6. **Write design doc** — save to `.context/plans/YYYY-MM-DD-<topic>.md`
 7. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
 8. **User reviews written spec** — ask user to review the spec file before proceeding
-9. **Transition to next step** — offer the user a choice: hand off to `/harness` for adaptive execution, or stop here (user decides next step independently)
+9. **Transition to next step** — offer a choice: hand off to `/harness` for adaptive execution, or stop here (user decides next step independently)
 
 ## The Process
 
 **Understanding the idea:**
 
-- Check out the current project state first (files, docs, recent commits)
-- Before asking detailed questions, assess scope: if the request describes multiple independent subsystems (e.g., "build a platform with chat, file storage, billing, and analytics"), flag this immediately. Don't spend questions refining details of a project that needs to be decomposed first.
-- If the project is too large for a single spec, help the user decompose into sub-projects: what are the independent pieces, how do they relate, what order should they be built? Then brainstorm the first sub-project through the normal design flow. Each sub-project gets its own spec → plan → implementation cycle.
+- Check current project state first (files, docs, recent commits)
+- Before asking detailed questions, assess scope: if the request describes multiple independent subsystems (e.g., "build a platform with chat, file storage, billing, and analytics"), flag immediately. Don't spend questions refining details of a project that needs decomposition first.
+- If the project is too large for a single spec, help the user decompose into sub-projects: independent pieces, how they relate, build order. Then brainstorm the first sub-project through the normal design flow. Each sub-project gets its own spec → plan → implementation cycle.
 - For appropriately-scoped projects, ask clarifying questions to refine the idea
-- Prefer multiple choice questions when possible, but open-ended is fine too
+- Prefer multiple choice questions; open-ended is fine too
 - Batch independent questions in one message, each with a recommended default and the impact of diverging; ask serially only when an answer gates the next question
 - Focus on understanding: purpose, constraints, success criteria
 
 **Exploring approaches:**
 
-- Propose 2-3 different approaches with trade-offs
+- Propose 2-3 approaches with trade-offs
 - Present options conversationally with your recommendation and reasoning
 - Lead with your recommended option and explain why
 
 **Presenting the design:**
 
-- Once you believe you understand what you're building, present the design
+- Once you understand what you're building, present the design
 - Scale each section to its complexity: a few sentences if straightforward, up to 200-300 words if nuanced
-- Ask after each section whether it looks right so far
+- Ask after each section whether it looks right
 - Cover: architecture, components, data flow, error handling, testing
-- Be ready to go back and clarify if something doesn't make sense
+- Go back and clarify if something doesn't make sense
 
 **Design for isolation and clarity:**
 
@@ -58,25 +58,25 @@ You MUST create a task for each of these items and complete them in order:
 
 **Working in existing codebases:**
 
-- Explore the current structure before proposing changes. Follow existing patterns.
-- Where existing code has problems that affect the work (e.g., a file that's grown too large, unclear boundaries, tangled responsibilities), include targeted improvements as part of the design - the way a good developer improves code they're working in.
+- Explore current structure before proposing changes. Follow existing patterns.
+- Where existing code has problems that affect the work (e.g., a file grown too large, unclear boundaries, tangled responsibilities), include targeted improvements as part of the design.
 - Don't propose unrelated refactoring. Stay focused on what serves the current goal.
 
 ## After the Design
 
-Write the validated spec to `.context/plans/YYYY-MM-DD-<topic>.md` unless user preferences override. Ensure `.context/specs` is listed in `.gitignore`. Self-review: fix placeholders, contradictions, ambiguity, and scope creep inline. Then ask the user to review the written spec; revise if requested. After approval, offer only: hand off to `/harness` with the spec as context, or stop.
+Write the validated spec to `.context/plans/YYYY-MM-DD-<topic>.md` unless user preferences override. Ensure `.context/specs` is in `.gitignore`. Self-review: fix placeholders, contradictions, ambiguity, and scope creep inline. Then ask the user to review the written spec; revise if requested. After approval, offer only: hand off to `/harness` with the spec as context, or stop.
 
 Do NOT invoke writing-plans, executing-plans, frontend-design, mcp-builder, or other implementation skills directly.
 
 ## Embedded Mode
 
-When invoked by another skill (e.g. `/harness` setup), brainstorming runs in **embedded mode**. The exploration process is the same — understand context, ask clarifying questions, propose approaches — but the output is structured data instead of a spec document.
+When invoked by another skill (e.g. `/harness` setup), brainstorming runs in **embedded mode**. Exploration process is the same — understand context, ask clarifying questions, propose approaches — but output is structured data instead of a spec document.
 
-When the caller is `/harness setup`, embedded mode owns the design exchange. Do not write a design doc, create a git commit, or trigger the standalone review gate. If the conversation started in standalone brainstorming but the user then routes the task into `/harness`, stop the standalone artifact flow and return control to harness.
+When the caller is `/harness setup`, embedded mode owns the design exchange. Do not write a design doc, create a git commit, or trigger the standalone review gate. If the conversation started in standalone brainstorming but the user routes the task into `/harness`, stop the standalone artifact flow and return control to harness.
 
 ### Output Schema
 
-Embedded mode produces a YAML block that the caller consumes directly. All fields are advisory — the caller decides which to adopt.
+Embedded mode produces a YAML block the caller consumes directly. All fields are advisory — the caller decides which to adopt.
 
 ```yaml
 goal: "<refined, verifiable goal statement>"
@@ -148,12 +148,12 @@ When this preamble is present, follow Embedded Mode. When absent, follow the sta
 
 A browser companion for mockups, diagrams, and visual options. It is a tool, not a mode; acceptance only makes it available for visual questions.
 
-**Offering the companion:** When you anticipate that upcoming questions will involve visual content (mockups, layouts, diagrams), offer it once for consent:
+**Offering the companion:** When you anticipate upcoming questions will involve visual content (mockups, layouts, diagrams), offer it once for consent:
 > "Some of what we're working on might be easier to explain if I can show it to you in a web browser. I can put together mockups, diagrams, comparisons, and other visuals as we go. This feature is still new and can be token-intensive. Want to try it? (Requires opening a local URL)"
 
 **This offer MUST be its own message.** Do not combine it with clarifying questions, context summaries, or any other content. The message should contain ONLY the offer above and nothing else. Wait for the user's response before continuing. If they decline, proceed with text-only brainstorming.
 
 **Per-question decision:** use browser only when seeing beats reading: mockups, wireframes, layout comparisons, architecture diagrams, side-by-side designs. Use terminal for requirements, conceptual choices, tradeoffs, text options, and scope. UI topic does not automatically mean visual.
 
-If they agree to the companion, read the detailed guide before proceeding:
+If they agree, read the detailed guide before proceeding:
 `skills/brainstorming/visual-companion.md`

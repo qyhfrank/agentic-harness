@@ -1,11 +1,11 @@
 ---
 name: asb-guide
-description: 'Use when the user asks about Agent Switchboard (ASB) config/sync/plugins/MCP integration or any `asb` CLI command (asb sync, asb plugin, asb mcp, .asb.toml). Do not use for general MCP server design outside ASB.'
+description: 'Agent Switchboard (ASB) config/sync/plugins/MCP integration or any `asb` CLI command (asb sync, asb plugin, asb mcp, .asb.toml). Not for general MCP server design outside ASB.'
 ---
 
 # Agent Switchboard (ASB) Guide
 
-ASB manages MCP servers, rules, commands, agents, skills, and hooks from `~/.asb/` on this machine (`ASB_HOME` configurable), syncing to every AI coding agent (Claude Code, Codex, Cursor, Gemini, OpenCode, Trae, Claude Desktop).
+ASB manages MCP servers, rules, commands, agents, skills, and hooks from `~/.asb/` (`ASB_HOME` configurable), syncing to AI coding agents (Claude Code, Codex, Cursor, Gemini, OpenCode, Trae, Claude Desktop).
 
 Alias: `asb`. Install: `npm i -g agent-switchboard`.
 
@@ -156,11 +156,9 @@ Profile and project layers use same schema; all fields optional (partial overlay
 
 Given global `enabled = ["a", "b", "c"]`:
 
-| Override                          | Result              |
-|:----------------------------------|:--------------------|
-| `app.section.enabled = ["x"]`     | `["x"]` (replace)   |
-| `app.section.add = ["d"]`         | `["a","b","c","d"]`  |
-| `app.section.remove = ["b"]`      | `["a","c"]`          |
+- `app.section.enabled = ["x"]`: `["x"]` (replace)
+- `app.section.add = ["d"]`: `["a","b","c","d"]`
+- `app.section.remove = ["b"]`: `["a","c"]`
 
 `enabled` takes full precedence; `add`/`remove` ignored when `enabled` set.
 
@@ -168,7 +166,7 @@ Plugin components auto-expanded into section lists during `asb sync`. No manual 
 
 ## MCP Configuration (mcp.json)
 
-File: `~/.asb/mcp.json` (JSONC, comments allowed on this machine).
+File: `~/.asb/mcp.json` (JSONC, comments allowed).
 
 Stores server **definitions** only. Enabled state managed in `config.toml [mcp].enabled`.
 
@@ -281,8 +279,8 @@ Entire directories copied to each agent's skill location. Deactivated skills cle
 
 JSON files or bundles in `~/.asb/hooks/`.
 
-**Single file**: `~/.asb/hooks/my-hook.json`
-**Bundle**: `~/.asb/hooks/my-hook/hook.json` + script files
+Single file: `~/.asb/hooks/my-hook.json`
+Bundle: `~/.asb/hooks/my-hook/hook.json` + script files
 
 ```json
 {
@@ -346,7 +344,7 @@ For detailed plugin configuration (sources, marketplace format, namespacing, exc
 
 ## Distribution Targets
 
-ASB distributes to 8 built-in targets. Each supports a subset of sections:
+8 built-in targets; section support:
 
 | Target           | MCP | Rules  | Commands | Agents | Skills | Hooks |
 |:-----------------|:---:|:------:|:--------:|:------:|:------:|:-----:|
