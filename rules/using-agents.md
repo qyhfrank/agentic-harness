@@ -9,8 +9,8 @@ Per-platform mapping:
 
 | Type | Claude Code | OpenCode | Codex CLI |
 |---|---|---|---|
-| Thinker | `/codex-exec` (MUST LOAD THIS SKILL FIRST!) | `@agent-gpt-5.5-xhigh` | native `gpt-5.5 xhigh` |
-| Doer | self / Agent / Task | `@agent-opus` | `/claude-exec` (MUST LOAD THIS SKILL FIRST!) |
+| Thinker | `/codex-exec` | `@agent-gpt-5.5-xhigh` | native `gpt-5.5 xhigh` |
+| Doer | self / Agent / Task | `@agent-opus` | `/claude-exec` |
 
 ## Execution Surfaces
 
