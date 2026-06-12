@@ -30,6 +30,7 @@ Cover explicit requirements, acceptance criteria, called-out scenarios, preserve
 
 #### Goal 2: Functional correctness
 Within agreed behavior, check happy paths, edge cases, nulls, invalid inputs, state transitions, return values, runtime behavior, and side effects by condition/time/scope.
+Broad code diffs: split reviewers across complementary angles: changed/removed behavior and lost invariants, caller/callee contract impact, language/framework pitfalls, wrapper/proxy/delegation correctness. Use relevant angles only; findings still need real anchors and source verification.
 
 #### Goal 3: Validation and evidence
 Check tests/assertions/logs/metrics/probes/manual checks across critical paths, boundaries, major failure modes. Conclusions need evidence. Heavy new browser/DOM harnesses, test frameworks, or validation infrastructure defaults to `near-blocking` plus lighter deterministic proof unless concrete bug evidence exists.
@@ -40,7 +41,7 @@ Check partial failure, retry, rollback, interruption, stale state, races, orderi
 
 #### Goal 5 (optional): Structure, simplification, and maintainability
 Add for large refactors, new abstractions, high coupling, unclear ownership, or hot-path/perf-sensitive code.
-Prefer delete/inline/narrow/reuse before layers. Reuse local helpers. Keep helpers only for real duplication, stable semantic boundaries, or materially better test seams. Flag unused returns/params, thin wrappers, dead generalization, no-consumer structures, excess helpers/wrappers/branches/aliases/state, unnecessary work, missed concurrency, hot-path bloat, pre-check-before-operate, missing cleanup, broad reads/loads. Skip stylistic, speculative, or scope-expanding suggestions.
+Prefer delete/inline/narrow/reuse before layers. Reuse local helpers. Keep helpers only for real duplication, stable semantic boundaries, or materially better test seams. Flag unused returns/params, thin wrappers, dead generalization, no-consumer structures, excess helpers/wrappers/branches/aliases/state, unnecessary work, missed concurrency, hot-path bloat, pre-check-before-operate, missing cleanup, broad reads/loads, and wrong-depth special cases outside the owning mechanism. Skip stylistic, speculative, or scope-expanding suggestions.
 
 ### Other cases
 
@@ -65,6 +66,7 @@ Custom goals state which standard goal they extend/replace. Reruns review diff s
 - Agent Context Card, e.g. `Agent: reviewer | depth 1/1 | budget 0 | parent: audit`
 - Target/scope materials: diff, files, plan, or artifact; git targets include base revision, candidate revision, diff range.
 - Goal name, angle, coverage target, standard.
+- Code goals: name concrete complementary angles across the 2 reviewers when useful.
 - Findings: non-speculative issues with real anchors only; skip stylistic; avoid scope expansion unless a verified issue requires it; deferred surfaces count only when artifact claims support or omission creates concrete current risk.
 - Preserve explicit user wording/surfaces; if exact labels, output shape, fields, or "do not use X" appear, propose alternates only for verified bugs; prefer delete, hide, narrow, reuse.
 - Validation gaps: smallest proof for current slice; new heavy infrastructure defaults to `near-blocking` unless concrete bug evidence exists.
