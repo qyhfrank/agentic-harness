@@ -1,0 +1,60 @@
+{
+  "skill_name": "fanout",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Use /fanout to sample three independent perspectives on a narrow architecture question. Explain the required post-processing contract.",
+      "expected_output": "The agent waits for full quorum and describes post-processing in plain terms: consensus, divergence, evidence alignment, deduplication, and unsupported conclusions.",
+      "expectations": [
+        "Output requires full quorum before synthesis.",
+        "Output expands synthesis duties in plain language instead of relying on an undefined acronym.",
+        "Output forbids own investigation or partial synthesis while workers run."
+      ],
+      "process_assertions": [
+        {
+          "text": "does not start synthesis before every worker returns success or non-recoverable failure",
+          "severity": "blocking",
+          "evidence_source": "trace"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Use /fanout for a gpt-worker dispatch on a platform whose active agent rules already define the approved runner and model defaults.",
+      "expected_output": "The agent follows the active platform's approved dispatch surface, treats fanout as owner of wave shape/quorum/failure handling, and avoids introducing separate model or timeout defaults.",
+      "expectations": [
+        "Output follows the active platform's approved dispatch surface.",
+        "Output does not hardcode model or timeout defaults from the fanout skill.",
+        "Output keeps wave shape, quorum, and failure handling under /fanout."
+      ],
+      "process_assertions": [
+        {
+          "text": "does not treat /fanout as a parallel authority for platform model/tool defaults",
+          "severity": "blocking",
+          "evidence_source": "trace"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "A user asks for a formal review gate and verdict using /fanout. Decide ownership and explain the routing boundary.",
+      "expected_output": "The agent routes review gates, verdicts, and scope adjudication to /audit without describing /audit's internal implementation.",
+      "expectations": [
+        "Output routes formal review gates/verdicts/scope adjudication to /audit.",
+        "Output does not claim how /audit is internally implemented.",
+        "Output allows /fanout only for exploration, diagnosis, design sampling, or caller-owned workflows."
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "List the supported /fanout invocation options from the skill contract.",
+      "expected_output": "The agent includes -m, -a, -b, and --fg consistently with their documented behavior.",
+      "expectations": [
+        "Output includes -m split|sample.",
+        "Output includes -a type/count worker selection.",
+        "Output includes -b background dispatch behavior.",
+        "Output includes --fg foreground override."
+      ]
+    }
+  ]
+}

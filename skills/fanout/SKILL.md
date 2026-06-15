@@ -1,7 +1,7 @@
 ---
 name: fanout
 description: 'Independent subtasks split across agents, or one question needing multiple perspectives (parallel agents, sample N agents, get multiple opinions). Review gates: /audit. Batch changes: /batch.'
-argument-hint: <task> [-m split|sample] [-a <type>[:<count>]]... [--fg]
+argument-hint: <task> [-m split|sample] [-a <type>[:<count>]]... [-b|--fg]
 ---
 
 Arguments: $ARGUMENTS
@@ -12,7 +12,7 @@ Arguments: $ARGUMENTS
 
 ## Ownership Boundary
 
-`/fanout` dispatches and samples; not formal code review. Review gates/verdicts/scope adjudication: `/audit` (calls `/fanout -m sample`). Use `/fanout` directly for exploration, diagnosis, design sampling, or caller-owned workflows.
+`/fanout` dispatches and samples; not formal code review. Review gates/verdicts/scope adjudication: `/audit`. Use `/fanout` directly for exploration, diagnosis, design sampling, or caller-owned workflows.
 
 ## Step 1: Infer mode
 
@@ -30,16 +30,15 @@ Arguments: $ARGUMENTS
 
 ## Step 3: Dispatch
 
-Background by default (see `-b`); foreground platforms (e.g. OpenCode write paths) dispatch one wave.
+Dispatch through the active platform's approved agent surface. Use `/codex-exec` for gpt workers only when the platform requires that runner; otherwise use native agent spawn. `/fanout` owns wave shape, quorum, and failure handling, not model/tool defaults.
 
-- **Claude Code:** gpt workers -> chain-load `/codex-exec`, dispatch as `codex exec` Bash commands. Non-gpt -> Agent tool.
-- **Codex CLI:** native spawn, `gpt-5.5` `xhigh`, 30-min timeout.
-- **Errors:** recoverable (rate limit, network, timeout) -> max 2 retries. Non-recoverable -> no silent local substitution.
+- Background is default when supported; foreground platforms dispatch one wave. `--fg` forces foreground.
+- Recoverable errors (rate limit, network, timeout) -> max 2 retries. Non-recoverable -> no silent local substitution.
 
 ## Step 4: Post-processing
 
-**Full quorum required.** While workers run, the main agent only waits — no own investigation, partial GSA, verification, implementation, or downstream action until every agent returns (success or non-recoverable failure). Early work skews synthesis toward first returners, misses dissent, and contaminates a role that must stay neutral. Verify factual outputs against source.
+**Full quorum required.** While workers run, the main agent only waits — no own investigation, partial synthesis, verification, implementation, or downstream action until every agent returns (success or non-recoverable failure). Early work skews synthesis toward first returners, misses dissent, and contaminates a role that must stay neutral. Verify factual outputs against source.
 
 - split: separate outputs, no aggregation.
-- sample: after quorum, GSA for consensus/divergence, evidence alignment, dedup, unsupported conclusions. Check whether consensus is evidence-backed or prompt-anchored; if shared assumptions collapsed diversity, say so and resample when option discovery matters.
+- sample: after quorum, synthesize consensus/divergence, evidence alignment, dedup, and unsupported conclusions. Check whether consensus is evidence-backed or prompt-anchored; if shared assumptions collapsed diversity, say so and resample when option discovery matters.
 - Partial quorum: only with explicit user approval. State deviation and missing agents first.
